@@ -1,47 +1,62 @@
-package assembler
+package shared
 
-type Instruction uint8
+import "fmt"
 
-const (
-	ADD    Instruction = 0b0010 // 2
-	BR     Instruction = 0b0000 // 0
-	BRNEG  Instruction = 0b0101 // 5
-	BRPOS  Instruction = 0b0001 // 1
-	BRZERO Instruction = 0b0100 // 4
-	COPY   Instruction = 0b1101 // 13
-	DIVIDE Instruction = 0b1010 // 10
-	LOAD   Instruction = 0b0011 // 3
-	MULT   Instruction = 0b1110 // 14
-	READ   Instruction = 0b1100 // 12
-	STOP   Instruction = 0b1011 // 11
-	STORE  Instruction = 0b0111 // 7
-	SUB    Instruction = 0b0110 // 6
-	WRITE  Instruction = 0b1000 // 8
-)
+type Program []Instruction
 
-func (i Instruction) Check() bool {
-	allowedInstructions := map[Instruction]bool{
-		ADD:    true,
-		BR:     true,
-		BRNEG:  true,
-		BRPOS:  true,
-		BRZERO: true,
-		COPY:   true,
-		DIVIDE: true,
-		LOAD:   true,
-		MULT:   true,
-		READ:   true,
-		STOP:   true,
-		STORE:  true,
-		SUB:    true,
-		WRITE:  true,
-	}
-
-	_, ok := allowedInstructions[i]
-
-	return ok
+type Instruction struct {
+	Operation Operation
+	Operands  Operands
 }
 
-func (i Instruction) String() {
+type Operands struct {
+	First  byte
+	Second byte
+}
 
+type Operation byte
+
+const (
+	ADD    Operation = 2
+	BR     Operation = 0
+	BRNEG  Operation = 5
+	BRPOS  Operation = 1
+	BRZERO Operation = 4
+	COPY   Operation = 13
+	DIVIDE Operation = 10
+	LOAD   Operation = 3
+	MULT   Operation = 14
+	READ   Operation = 12
+	STOP   Operation = 11
+	STORE  Operation = 7
+	SUB    Operation = 6
+	WRITE  Operation = 8
+)
+
+// string -> Operation -> func
+
+// Campo de operação -> (Instr (ADD, SUB...) ou PseudoInstr (CONST, SPACE...))
+// func (i Instruction) Check() bool {
+// 	// allowedInstructions := map[Instruction]bool{
+// 	// 	ADD:    true,
+// 	// 	BR:     true,
+// 	// 	BRNEG:  true,
+// 	// 	BRPOS:  true,
+// 	// 	BRZERO: true,
+// 	// 	COPY:   true,
+// 	// 	DIVIDE: true,
+// 	// 	LOAD:   true,
+// 	// 	MULT:   true,
+// 	// 	READ:   true,
+// 	// 	STOP:   true,
+// 	// 	STORE:  true,
+// 	// 	SUB:    true,
+// 	// 	WRITE:  true,
+// 	// }
+
+// 	return ok
+// }
+
+func (i Instruction) String() string {
+	return fmt.Sprintf("<(%d) [%d, %d]>", i.Operation, i.Operands.First, i.Operands.Second)
 }

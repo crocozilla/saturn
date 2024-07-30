@@ -5,7 +5,8 @@ import (
 	"os"
 )
 
-func scanWords(path string, callback func(word string)) {
+// TODO: Trocar para ler por linha
+func scanLines(path string, callback func(line string)) {
 	file, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -13,11 +14,11 @@ func scanWords(path string, callback func(word string)) {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanWords)
+	scanner.Split(bufio.ScanLines)
 
 	for scanner.Scan() {
-		word := scanner.Text()
-		callback(word)
+		line := scanner.Text()
+		callback(line)
 	}
 
 	if err := scanner.Err(); err != nil {

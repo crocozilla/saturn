@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"saturn/shared"
+)
 
 func main() {
-	fmt.Println("Não implementado")
+	i := shared.Instruction{ 
+		Operation: shared.ADD,
+		Operands: shared.Operands{
+			First: 2,
+			Second: 5,
+		},
+	}
+
+	fmt.Println(i)
 }

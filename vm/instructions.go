@@ -1,5 +1,12 @@
 package vm
 
+type Instr uint16
+
+type InstrParameters struct {
+	first  uint8
+	second uint8
+}
+
 const (
 	ADD    = 0b0010 // 2
 	BR     = 0b0000 // 0
@@ -18,8 +25,27 @@ const (
 )
 
 type VirtualMachine struct {
+	accumulator uint32
+	memory      [128]byte
+	operations  map[Instr]func(InstrParameters)
 }
 
-func run() {
+func New() *VirtualMachine {
+	vm := new(VirtualMachine)
+	vm.setupOperations()
+	return vm
+}
 
+func (vm *VirtualMachine) setupOperations() {
+	vm.operations = map[Instr]func(InstrParameters){
+		ADD: vm.add,
+	}
+}
+
+func (vm *VirtualMachine) Execute(instruction Instr, parameters InstrParameters) {
+	vm.operations[instruction](parameters)
+}
+
+func (vm *VirtualMachine) add(parameters InstrParameters) {
+	
 }

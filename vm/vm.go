@@ -2,17 +2,15 @@ package vm
 
 import "saturn/shared"
 
-type word int16
-
 type VirtualMachine struct {
-	memory      [128]word
-	pc          uint16
+	memory [128]shared.Word
+	pc     uint16
 	//stack pointer
-	accumulator int16
+	accumulator shared.Word
 	//OperationMode
-	instruction uint16 // talvez deveria ser tipo shared.operation
-	memoryAdress uint16 
-	operations  map[shared.Operation]func(shared.Operands)
+	operation    shared.Operation // talvez deveria ser tipo shared.operation
+	memoryAdress uint16
+	operations   map[shared.Operation]func(shared.Operands)
 }
 
 func New() *VirtualMachine {
@@ -55,7 +53,7 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 // -- Operations
 
 func (vm *VirtualMachine) add(operands shared.Operands) {
-	vm.accumulator = vm.accumulator + uint32(operands.First)
+	vm.accumulator = vm.accumulator + operands.First
 }
 
 func (vm *VirtualMachine) br(operands shared.Operands) {

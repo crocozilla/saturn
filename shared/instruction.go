@@ -2,6 +2,8 @@ package shared
 
 import "fmt"
 
+type Word int16
+
 type Program []Instruction
 
 type Instruction struct {
@@ -10,11 +12,11 @@ type Instruction struct {
 }
 
 type Operands struct {
-	First  byte
-	Second byte
+	First  Word
+	Second Word
 }
 
-type Operation byte
+type Operation Word
 
 const (
 	ADD    Operation = 2
@@ -57,7 +59,7 @@ const (
 // 	// }
 
 // 	return ok
-	// missing call and ret
+// missing call and ret
 // }
 
 func (i Instruction) String() string {

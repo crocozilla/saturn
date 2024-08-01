@@ -2,11 +2,17 @@ package vm
 
 import "saturn/shared"
 
+type word int16
+
 type VirtualMachine struct {
-	accumulator uint32
-	memory      [128]byte
+	memory      [128]word
+	pc          uint16
+	//stack pointer
+	accumulator int16
+	//OperationMode
+	instruction uint16 // talvez deveria ser tipo shared.operation
+	memoryAdress uint16 
 	operations  map[shared.Operation]func(shared.Operands)
-	pc          uint32
 }
 
 func New() *VirtualMachine {
@@ -22,11 +28,13 @@ func (vm *VirtualMachine) setupOperations() {
 		shared.BRNEG:  vm.brneg,
 		shared.BRPOS:  vm.brpos,
 		shared.BRZERO: vm.brzero,
+		shared.CALL:   vm.call,
 		shared.COPY:   vm.copy,
 		shared.DIVIDE: vm.divide,
 		shared.LOAD:   vm.load,
 		shared.MULT:   vm.mult,
 		shared.READ:   vm.read,
+		shared.RET:    vm.ret,
 		shared.STOP:   vm.stop,
 		shared.STORE:  vm.store,
 		shared.SUB:    vm.sub,
@@ -66,6 +74,10 @@ func (vm *VirtualMachine) brzero(operands shared.Operands) {
 	panic("not implemented")
 }
 
+func (vm *VirtualMachine) call(operands shared.Operands) {
+	panic("not implemented")
+}
+
 func (vm *VirtualMachine) copy(operands shared.Operands) {
 	panic("not implemented")
 }
@@ -83,6 +95,10 @@ func (vm *VirtualMachine) mult(operands shared.Operands) {
 }
 
 func (vm *VirtualMachine) read(operands shared.Operands) {
+	panic("not implemented")
+}
+
+func (vm *VirtualMachine) ret(operands shared.Operands) {
 	panic("not implemented")
 }
 

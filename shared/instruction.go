@@ -22,11 +22,13 @@ const (
 	BRNEG  Operation = 5
 	BRPOS  Operation = 1
 	BRZERO Operation = 4
+	CALL   Operation = 15
 	COPY   Operation = 13
 	DIVIDE Operation = 10
 	LOAD   Operation = 3
 	MULT   Operation = 14
 	READ   Operation = 12
+	RET    Operation = 16
 	STOP   Operation = 11
 	STORE  Operation = 7
 	SUB    Operation = 6
@@ -55,6 +57,7 @@ const (
 // 	// }
 
 // 	return ok
+	// missing call and ret
 // }
 
 func (i Instruction) String() string {

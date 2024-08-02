@@ -1,14 +1,21 @@
 package vm
 
-import "saturn/shared"
+import (
+	"errors"
+	"saturn/shared"
+)
+
+const (
+	stackBase shared.Word = 2 //2 é definido no pdf do trabalho
+)
 
 type VirtualMachine struct {
-	memory [128]shared.Word
-	pc     uint16
-	//stack pointer
-	accumulator shared.Word
+	memory       [128]shared.Word
+	pc           uint16
+	stackPointer shared.Word
+	accumulator  shared.Word
 	//OperationMode
-	operation    shared.Operation // talvez deveria ser tipo shared.operation
+	operation    shared.Operation
 	memoryAdress uint16
 	operations   map[shared.Operation]func(shared.Operands)
 }
@@ -16,6 +23,7 @@ type VirtualMachine struct {
 func New() *VirtualMachine {
 	vm := new(VirtualMachine)
 	vm.setupOperations()
+	vm.stackInit()
 	return vm
 }
 
@@ -40,6 +48,42 @@ func (vm *VirtualMachine) setupOperations() {
 	}
 }
 
+func (vm *VirtualMachine) stackInit() {
+	// primeiro elemento da pilha é seu limite (definido no pdf)
+	var stackLimit shared.Word = 10 //max elements
+	vm.memory[stackBase] = stackLimit
+	vm.stackPointer++
+}
+
+func (vm *VirtualMachine) stackPush(value shared.Word) error {
+	stackLimit := vm.memory[stackBase]
+
+	if vm.stackPointer <= stackLimit {
+		pointer := vm.stackPointer + stackBase
+
+		vm.memory[pointer] = value
+		vm.stackPointer++
+		return nil
+
+	}
+
+	vm.stackPointer = 0
+	return errors.New("stack overflow")
+
+}
+
+func (vm *VirtualMachine) stackPop() (shared.Word, error) {
+	vm.stackPointer--
+
+	if vm.stackPointer > 0 { //cant pop first element (stackBase)
+		pointer := vm.stackPointer + stackBase
+		return vm.memory[pointer], nil
+	}
+
+	return 0, errors.New("empty stack")
+
+}
+
 func (vm *VirtualMachine) Execute(instr shared.Instruction) {
 	vm.operations[instr.Operation](instr.Operands)
 }
@@ -51,7 +95,7 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 }
 
 // -- Operations
-
+// levar em consideracao modos de enderecamento
 func (vm *VirtualMachine) add(operands shared.Operands) {
 	vm.accumulator = vm.accumulator + operands.First
 }

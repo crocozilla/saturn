@@ -49,20 +49,19 @@ func (vm *VirtualMachine) setupOperations() {
 }
 
 func (vm *VirtualMachine) stackInit() {
-	// primeiro elemento da pilha é seu limite (definido no pdf)
 	var stackLimit shared.Word = 10 //max elements
+	// primeiro elemento da pilha é seu limite (definido no pdf)
 	vm.memory[stackBase] = stackLimit
-	vm.stackPointer++
 }
 
 func (vm *VirtualMachine) stackPush(value shared.Word) error {
+	vm.stackPointer++
 	stackLimit := vm.memory[stackBase]
 
 	if vm.stackPointer <= stackLimit {
 		pointer := vm.stackPointer + stackBase
-
 		vm.memory[pointer] = value
-		vm.stackPointer++
+
 		return nil
 
 	}
@@ -73,10 +72,10 @@ func (vm *VirtualMachine) stackPush(value shared.Word) error {
 }
 
 func (vm *VirtualMachine) stackPop() (shared.Word, error) {
-	vm.stackPointer--
 
 	if vm.stackPointer > 0 { //cant pop first element (stackBase)
 		pointer := vm.stackPointer + stackBase
+		vm.stackPointer--
 		return vm.memory[pointer], nil
 	}
 

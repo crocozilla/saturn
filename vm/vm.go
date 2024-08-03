@@ -36,7 +36,6 @@ func New() *VirtualMachine {
 }
 
 func (vm *VirtualMachine) setupOperations() {
-	// Provavelmente não está funcionando pois a shared.Operation tem modos de endereçamento acoplados no OPCODE
 	vm.operations = map[shared.Operation]func(shared.Operands, addressMode){
 		shared.ADD:    vm.add,
 		shared.BR:     vm.br,
@@ -90,6 +89,7 @@ func (vm *VirtualMachine) stackPop() (shared.Word, error) {
 
 func (vm *VirtualMachine) Execute(instr shared.Instruction) {
 	addressMode := extractAddressMode(instr)
+	instr.Operation = instr.Operation % 16 // effectively removes address mode bits
 	vm.operations[instr.Operation](instr.Operands, addressMode)
 }
 
@@ -104,9 +104,8 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 }
 
 func extractAddressMode(instr shared.Instruction) addressMode {
-	bitMask := 0b0000000001110000
 
-	decidingBits := (bitMask & int(instr.Operation)) >> 4
+	addressModeBits := int(instr.Operation) >> 4
 
 	addressModes := map[uint16]addressMode{
 		0b000: DIRECT,
@@ -116,7 +115,7 @@ func extractAddressMode(instr shared.Instruction) addressMode {
 		0b100: IMMEDIATE,
 	}
 
-	mode, ok := addressModes[uint16(decidingBits)]
+	mode, ok := addressModes[uint16(addressModeBits)]
 	if !ok {
 		panic("invalid address mode in instruction")
 	}

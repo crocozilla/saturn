@@ -36,6 +36,7 @@ func New() *VirtualMachine {
 }
 
 func (vm *VirtualMachine) setupOperations() {
+	// Provavelmente não está funcionando pois a shared.Operation tem modos de endereçamento acoplados no OPCODE
 	vm.operations = map[shared.Operation]func(shared.Operands, addressMode){
 		shared.ADD:    vm.add,
 		shared.BR:     vm.br,
@@ -93,8 +94,12 @@ func (vm *VirtualMachine) Execute(instr shared.Instruction) {
 }
 
 func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
-	for _, instr := range program {
+	instr := program[vm.programCounter]
+
+	for instr.Operation != shared.STOP {
 		vm.Execute(instr)
+		vm.programCounter++
+		instr = program[vm.programCounter]
 	}
 }
 

@@ -5,19 +5,27 @@ import (
 	"saturn/shared"
 )
 
+const stackBase uint16 = 2 // 2 é definido no pdf do trabalho
+
+type addressMode uint8
+
 const (
-	stackBase shared.Word = 2 //2 é definido no pdf do trabalho
+	DIRECT addressMode = iota
+	INDIRECT_01
+	INDIRECT_10
+	INDIRECT_11
+	IMMEDIATE
 )
 
 type VirtualMachine struct {
-	memory       [128]shared.Word
-	pc           uint16
-	stackPointer shared.Word
-	accumulator  shared.Word
+	memory         [128]shared.Word
+	programCounter uint16
+	stackPointer   uint16
+	accumulator    shared.Word
 	//OperationMode
 	operation    shared.Operation
 	memoryAdress uint16
-	operations   map[shared.Operation]func(shared.Operands)
+	operations   map[shared.Operation]func(shared.Operands, addressMode)
 }
 
 func New() *VirtualMachine {
@@ -28,7 +36,7 @@ func New() *VirtualMachine {
 }
 
 func (vm *VirtualMachine) setupOperations() {
-	vm.operations = map[shared.Operation]func(shared.Operands){
+	vm.operations = map[shared.Operation]func(shared.Operands, addressMode){
 		shared.ADD:    vm.add,
 		shared.BR:     vm.br,
 		shared.BRNEG:  vm.brneg,
@@ -49,42 +57,39 @@ func (vm *VirtualMachine) setupOperations() {
 }
 
 func (vm *VirtualMachine) stackInit() {
-	var stackLimit shared.Word = 10 //max elements
-	// primeiro elemento da pilha é seu limite (definido no pdf)
-	vm.memory[stackBase] = stackLimit
+	var stackLimit uint16 = 10                     // max elements
+	vm.memory[stackBase] = shared.Word(stackLimit) // primeiro elemento da pilha é seu limite (definido no pdf)
 }
 
 func (vm *VirtualMachine) stackPush(value shared.Word) error {
 	vm.stackPointer++
-	stackLimit := vm.memory[stackBase]
+	stackLimit := uint16(vm.memory[stackBase])
 
-	if vm.stackPointer <= stackLimit {
-		pointer := vm.stackPointer + stackBase
-		vm.memory[pointer] = value
-
-		return nil
-
+	if vm.stackPointer > stackLimit {
+		vm.stackPointer = 0
+		return errors.New("stack overflow")
 	}
 
-	vm.stackPointer = 0
-	return errors.New("stack overflow")
+	address := vm.stackPointer + stackBase
+	vm.memory[address] = value
 
+	return nil
 }
 
 func (vm *VirtualMachine) stackPop() (shared.Word, error) {
-
-	if vm.stackPointer > 0 { //cant pop first element (stackBase)
-		pointer := vm.stackPointer + stackBase
-		vm.stackPointer--
-		return vm.memory[pointer], nil
+	if vm.stackPointer == 0 {
+		return 0, errors.New("empty stack")
 	}
 
-	return 0, errors.New("empty stack")
+	address := vm.stackPointer + stackBase
+	vm.stackPointer--
 
+	return vm.memory[address], nil
 }
 
 func (vm *VirtualMachine) Execute(instr shared.Instruction) {
-	vm.operations[instr.Operation](instr.Operands)
+	addressMode := extractAddressMode(instr)
+	vm.operations[instr.Operation](instr.Operands, addressMode)
 }
 
 func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
@@ -93,68 +98,89 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 	}
 }
 
+func extractAddressMode(instr shared.Instruction) addressMode {
+	bitMask := 0b0000000001110000
+
+	decidingBits := (bitMask & int(instr.Operation)) >> 4
+
+	addressModes := map[uint16]addressMode{
+		0b000: DIRECT,
+		0b001: INDIRECT_01,
+		0b010: INDIRECT_10,
+		0b011: INDIRECT_11,
+		0b100: IMMEDIATE,
+	}
+
+	mode, ok := addressModes[uint16(decidingBits)]
+	if !ok {
+		panic("invalid address mode in instruction")
+	}
+
+	return mode
+}
+
 // -- Operations
-// levar em consideracao modos de enderecamento
-func (vm *VirtualMachine) add(operands shared.Operands) {
+
+func (vm *VirtualMachine) add(operands shared.Operands, mode addressMode) {
 	vm.accumulator = vm.accumulator + operands.First
 }
 
-func (vm *VirtualMachine) br(operands shared.Operands) {
+func (vm *VirtualMachine) br(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) brneg(operands shared.Operands) {
+func (vm *VirtualMachine) brneg(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) brpos(operands shared.Operands) {
+func (vm *VirtualMachine) brpos(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) brzero(operands shared.Operands) {
+func (vm *VirtualMachine) brzero(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) call(operands shared.Operands) {
+func (vm *VirtualMachine) call(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) copy(operands shared.Operands) {
+func (vm *VirtualMachine) copy(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) divide(operands shared.Operands) {
+func (vm *VirtualMachine) divide(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) load(operands shared.Operands) {
+func (vm *VirtualMachine) load(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) mult(operands shared.Operands) {
+func (vm *VirtualMachine) mult(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) read(operands shared.Operands) {
+func (vm *VirtualMachine) read(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) ret(operands shared.Operands) {
+func (vm *VirtualMachine) ret(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) stop(operands shared.Operands) {
+func (vm *VirtualMachine) stop(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) store(operands shared.Operands) {
+func (vm *VirtualMachine) store(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) sub(operands shared.Operands) {
+func (vm *VirtualMachine) sub(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) write(operands shared.Operands) {
+func (vm *VirtualMachine) write(operands shared.Operands, mode addressMode) {
 	panic("not implemented")
 }

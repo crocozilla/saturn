@@ -2,17 +2,12 @@ package main
 
 import (
 	"fmt"
-	"saturn/shared"
 )
 
 func main() {
-	i := shared.Instruction{ 
-		Operation: shared.ADD,
-		Operands: shared.Operands{
-			First: 2,
-			Second: 5,
-		},
-	}
+	bitMask := 0b001100
 
-	fmt.Println(i)
+	code := 0b000100
+
+	fmt.Printf("%d", bitMask & code)
 }

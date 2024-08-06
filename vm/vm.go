@@ -7,16 +7,6 @@ import (
 
 const stackBase uint16 = 2 // 2 é definido no pdf do trabalho
 
-type addressMode uint8
-
-const (
-	DIRECT addressMode = iota
-	INDIRECT_01
-	INDIRECT_10
-	INDIRECT_11
-	IMMEDIATE
-)
-
 type VirtualMachine struct {
 	memory         [128]shared.Word
 	programCounter uint16
@@ -25,7 +15,8 @@ type VirtualMachine struct {
 	//OperationMode
 	operation    shared.Operation
 	memoryAdress uint16
-	operations   map[shared.Operation]func(shared.Operands, addressMode)
+	operations   map[shared.Operation]func(shared.Operands, shared.AddressMode)
+	isRunning    bool
 }
 
 func New() *VirtualMachine {
@@ -36,8 +27,7 @@ func New() *VirtualMachine {
 }
 
 func (vm *VirtualMachine) setupOperations() {
-	// Provavelmente não está funcionando pois a shared.Operation tem modos de endereçamento acoplados no OPCODE
-	vm.operations = map[shared.Operation]func(shared.Operands, addressMode){
+	vm.operations = map[shared.Operation]func(shared.Operands, shared.AddressMode){
 		shared.ADD:    vm.add,
 		shared.BR:     vm.br,
 		shared.BRNEG:  vm.brneg,
@@ -89,103 +79,107 @@ func (vm *VirtualMachine) stackPop() (shared.Word, error) {
 }
 
 func (vm *VirtualMachine) Execute(instr shared.Instruction) {
-	addressMode := extractAddressMode(instr)
-	vm.operations[instr.Operation](instr.Operands, addressMode)
+	vm.operations[instr.Operation](instr.Operands, instr.AddressMode)
 }
 
 func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
-	instr := program[vm.programCounter]
+	vm.isRunning = true
+	currentInstruction := program[vm.programCounter]
 
-	for instr.Operation != shared.STOP {
-		vm.Execute(instr)
+	for vm.isRunning {
+		vm.Execute(currentInstruction)
 		vm.programCounter++
-		instr = program[vm.programCounter]
+		currentInstruction = program[vm.programCounter]
 	}
 }
 
-func extractAddressMode(instr shared.Instruction) addressMode {
-	bitMask := 0b0000000001110000
 
-	decidingBits := (bitMask & int(instr.Operation)) >> 4
+// [deprecated] - mover para assembler talvez
+// func extractAddressMode(instr shared.Instruction) shared.AddressMode {
+// 	addressModeBits := int(instr.Operation) >> 4
 
-	addressModes := map[uint16]addressMode{
-		0b000: DIRECT,
-		0b001: INDIRECT_01,
-		0b010: INDIRECT_10,
-		0b011: INDIRECT_11,
-		0b100: IMMEDIATE,
-	}
+// 	addressModes := map[uint16]shared.AddressMode{
+// 		0b000: shared.DIRECT,
+// 		0b001: shared.INDIRECT_01,
+// 		0b010: shared.INDIRECT_10,
+// 		0b011: shared.INDIRECT_11,
+// 		0b100: shared.IMMEDIATE,
+// 	}
 
-	mode, ok := addressModes[uint16(decidingBits)]
-	if !ok {
-		panic("invalid address mode in instruction")
-	}
+// 	mode, ok := addressModes[uint16(addressModeBits)]
+// 	if !ok {
+// 		panic("invalid address mode in instruction")
+// 	}
 
-	return mode
-}
+// 	return mode
+// }
+
+// func extractOpCode(instr shared.Instruction) shared.Operation {
+// 	return instr.Operation % 16
+// }
 
 // -- Operations
 
-func (vm *VirtualMachine) add(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) add(operands shared.Operands, mode shared.AddressMode) {
 	vm.accumulator = vm.accumulator + operands.First
 }
 
-func (vm *VirtualMachine) br(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) br(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) brneg(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) brneg(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) brpos(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) brpos(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) brzero(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) brzero(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) call(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) call(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) copy(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) copy(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) divide(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) divide(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) load(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) load(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) mult(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) mult(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) read(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) read(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) ret(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) ret(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) stop(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) stop(operands shared.Operands, mode shared.AddressMode) {
+	vm.isRunning = false
+}
+
+func (vm *VirtualMachine) store(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) store(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) sub(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }
 
-func (vm *VirtualMachine) sub(operands shared.Operands, mode addressMode) {
-	panic("not implemented")
-}
-
-func (vm *VirtualMachine) write(operands shared.Operands, mode addressMode) {
+func (vm *VirtualMachine) write(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }

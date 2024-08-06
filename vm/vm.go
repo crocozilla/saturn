@@ -89,7 +89,8 @@ func (vm *VirtualMachine) stackPop() (shared.Word, error) {
 
 func (vm *VirtualMachine) Execute(instr shared.Instruction) {
 	addressMode := extractAddressMode(instr)
-	instr.Operation = instr.Operation % 16 // effectively removes address mode bits
+	instr.Operation = extractOpCode(instr)
+
 	vm.operations[instr.Operation](instr.Operands, addressMode)
 }
 
@@ -121,6 +122,10 @@ func extractAddressMode(instr shared.Instruction) addressMode {
 	}
 
 	return mode
+}
+
+func extractOpCode(instr shared.Instruction) shared.Operation {
+	return instr.Operation % 16
 }
 
 // -- Operations

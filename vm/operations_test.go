@@ -34,7 +34,7 @@ func TestAdd(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestBr(t *testing.T) {
@@ -55,7 +55,7 @@ func TestBr(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestBrneg(t *testing.T) {
@@ -85,8 +85,9 @@ func TestBrneg(t *testing.T) {
 	if shared.Word(vm.programCounter) != expected {
 		t.Fatalf(`brneg not working, expected %v on pc, got %v`, expected, vm.programCounter)
 	}
+
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestBrpos(t *testing.T) {
@@ -118,7 +119,7 @@ func TestBrpos(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 func TestBrzero(t *testing.T) {
 	vm := New()
@@ -148,7 +149,7 @@ func TestBrzero(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestCall(t *testing.T) {
@@ -182,7 +183,7 @@ func TestCall(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestCopy(t *testing.T) {
@@ -219,7 +220,7 @@ func TestDivide(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestLoad(t *testing.T) {
@@ -251,7 +252,7 @@ func TestLoad(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestMult(t *testing.T) {
@@ -284,7 +285,7 @@ func TestMult(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestRead(t *testing.T) {
@@ -328,7 +329,7 @@ func TestStore(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestSub(t *testing.T) {
@@ -361,7 +362,7 @@ func TestSub(t *testing.T) {
 	}
 
 	//indirect
-	panic("indirect testing not implemented")
+	t.Fatalf(`indirect testing not implemented, other tests passed`)
 }
 
 func TestWrite(t *testing.T) {

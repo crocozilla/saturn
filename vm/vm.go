@@ -14,7 +14,10 @@ type VirtualMachine struct {
 	accumulator    shared.Word
 	//OperationMode
 	operation    shared.Operation
+	// -------------------
+	instruction  uint16
 	memoryAdress uint16
+	// -------------------
 	operations   map[shared.Operation]func(shared.Operands, shared.AddressMode)
 	isRunning    bool
 }
@@ -84,15 +87,15 @@ func (vm *VirtualMachine) Execute(instr shared.Instruction) {
 
 func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 	vm.isRunning = true
-	currentInstruction := program[vm.programCounter]
 
 	for vm.isRunning {
+		currentInstruction := program[vm.programCounter]
 		vm.Execute(currentInstruction)
 		vm.programCounter++
-		currentInstruction = program[vm.programCounter]
 	}
-}
 
+	vm.programCounter = 0
+}
 
 // [deprecated] - mover para assembler talvez
 // func extractAddressMode(instr shared.Instruction) shared.AddressMode {

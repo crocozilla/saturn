@@ -14,11 +14,11 @@ func TestAdd(t *testing.T) {
 		AddressMode: shared.IMMEDIATE,
 		Operation:   shared.ADD,
 		Operands:    operands}
-	var expected shared.Word = vm.accumulator + operands.First
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`add immediate not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 20 {
+		t.Fatalf(`add immediate not working, expected 20 on acc, got %v`, vm.accumulator)
 	}
 
 	//direct
@@ -27,11 +27,11 @@ func TestAdd(t *testing.T) {
 	operands.First = 35
 	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
-	expected = vm.accumulator + vm.memory[operands.First]
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`add direct not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 50 {
+		t.Fatalf(`add direct not working, expected 50 on acc, got %v`, vm.accumulator)
 	}
 
 	//indirect
@@ -48,11 +48,11 @@ func TestBr(t *testing.T) {
 		AddressMode: shared.DIRECT,
 		Operation:   shared.BR,
 		Operands:    operands}
-	var expected shared.Word = vm.memory[operands.First]
+
 	vm.Execute(instr)
 
-	if shared.Word(vm.programCounter) != expected {
-		t.Fatalf(`br direct not working, expected %v on pc, got %v`, expected, vm.programCounter)
+	if shared.Word(vm.programCounter) != 50 {
+		t.Fatalf(`br direct not working, expected 50 on pc, got %v`, vm.programCounter)
 	}
 
 	//indirect
@@ -70,21 +70,21 @@ func TestBrneg(t *testing.T) {
 		AddressMode: shared.DIRECT,
 		Operation:   shared.BRNEG,
 		Operands:    operands}
-	var expected shared.Word = vm.memory[operands.First]
+
 	vm.Execute(instr)
 
-	if shared.Word(vm.programCounter) != expected {
-		t.Fatalf(`brneg direct not working, expected %v on pc, got %v`, expected, vm.programCounter)
+	if shared.Word(vm.programCounter) != 50 {
+		t.Fatalf(`brneg direct not working, expected 50 on pc, got %v`, vm.programCounter)
 	}
 
 	//acc >= 0
 	vm.accumulator = 0
 	vm.programCounter = 0
-	expected = shared.Word(vm.programCounter)
+
 	vm.Execute(instr)
 
-	if shared.Word(vm.programCounter) != expected {
-		t.Fatalf(`brneg not working, expected %v on pc, got %v`, expected, vm.programCounter)
+	if shared.Word(vm.programCounter) != 0 {
+		t.Fatalf(`brneg not working, expected 50 on pc, got %v`, vm.programCounter)
 	}
 
 	//indirect
@@ -102,21 +102,21 @@ func TestBrpos(t *testing.T) {
 		AddressMode: shared.DIRECT,
 		Operation:   shared.BRPOS,
 		Operands:    operands}
-	var expected shared.Word = vm.memory[operands.First]
+
 	vm.Execute(instr)
 
-	if shared.Word(vm.programCounter) != expected {
-		t.Fatalf(`brpos direct not working, expected %v on pc, got %v`, expected, vm.programCounter)
+	if shared.Word(vm.programCounter) != 50 {
+		t.Fatalf(`brpos direct not working, expected 50 on pc, got %v`, vm.programCounter)
 	}
 
 	//acc <= 0
 	vm.accumulator = 0
 	vm.programCounter = 0
-	expected = shared.Word(vm.programCounter)
+
 	vm.Execute(instr)
 
-	if shared.Word(vm.programCounter) != expected {
-		t.Fatalf(`brpos not working, expected %v on pc, got %v`, expected, vm.programCounter)
+	if vm.programCounter != 0 {
+		t.Fatalf(`brpos not working, expected 0 on pc, got %v`, vm.programCounter)
 	}
 
 	//indirect
@@ -132,21 +132,21 @@ func TestBrzero(t *testing.T) {
 		AddressMode: shared.DIRECT,
 		Operation:   shared.BRZERO,
 		Operands:    operands}
-	var expected shared.Word = vm.memory[operands.First]
+
 	vm.Execute(instr)
 
-	if shared.Word(vm.programCounter) != expected {
-		t.Fatalf(`br direct not working, expected %v on pc, got %v`, expected, vm.programCounter)
+	if shared.Word(vm.programCounter) != 50 {
+		t.Fatalf(`br direct not working, expected 50 on pc, got %v`, vm.programCounter)
 	}
 
 	//acc != 0
 	vm.accumulator = 1
 	vm.programCounter = 0
-	expected = shared.Word(vm.programCounter)
+
 	vm.Execute(instr)
 
-	if shared.Word(vm.programCounter) != expected {
-		t.Fatalf(`brzero not working, expected %v on pc, got %v`, expected, vm.programCounter)
+	if vm.programCounter != 0 {
+		t.Fatalf(`brzero not working, expected 0 on pc, got %v`, vm.programCounter)
 	}
 
 	//indirect
@@ -157,8 +157,7 @@ func TestCall(t *testing.T) {
 	vm := New()
 
 	//stack tests
-	var expected uint16 = 10
-	vm.programCounter = expected
+	vm.programCounter = 10
 	operands := shared.Operands{First: 35, Second: 0}
 	instr := shared.Instruction{
 		AddressMode: shared.DIRECT,
@@ -172,15 +171,14 @@ func TestCall(t *testing.T) {
 		t.Fatalf(`call not working, stack is empty (should have program counter)`)
 	}
 
-	if uint16(result) != expected {
-		t.Fatalf(`call not working, expected %v on stack, got %v`, expected, vm.programCounter)
+	if uint16(result) != 10 {
+		t.Fatalf(`call not working, expected 10 on stack, got %v`, vm.programCounter)
 	}
 
 	//direct
-	expected2 := vm.memory[operands.First]
 
-	if vm.programCounter != uint16(expected2) {
-		t.Fatalf(`call direct not working, expected %v on pc, got %v`, expected2, vm.programCounter)
+	if shared.Word(vm.programCounter) != vm.memory[operands.First] {
+		t.Fatalf(`call direct not working, expected %v on pc, got %v`, vm.memory[operands.First], vm.programCounter)
 	}
 
 	//indirect
@@ -201,11 +199,11 @@ func TestDivide(t *testing.T) {
 		AddressMode: shared.IMMEDIATE,
 		Operation:   shared.DIVIDE,
 		Operands:    operands}
-	var expected shared.Word = vm.accumulator / operands.First
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`divide immediate not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 10/2 {
+		t.Fatalf(`divide immediate not working, expected 5 on acc, got %v`, vm.accumulator)
 	}
 
 	//direct
@@ -214,11 +212,11 @@ func TestDivide(t *testing.T) {
 	operands.First = 35
 	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
-	expected = vm.accumulator / vm.memory[operands.First]
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`divide direct not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 10/5 {
+		t.Fatalf(`divide direct not working, expected 2 on acc, got %v`, vm.accumulator)
 	}
 
 	//indirect
@@ -234,11 +232,11 @@ func TestLoad(t *testing.T) {
 		AddressMode: shared.IMMEDIATE,
 		Operation:   shared.LOAD,
 		Operands:    operands}
-	var expected shared.Word = operands.First
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`load immediate not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 20 {
+		t.Fatalf(`load immediate not working, expected 20 on acc, got %v`, vm.accumulator)
 	}
 
 	//direct
@@ -247,11 +245,11 @@ func TestLoad(t *testing.T) {
 	operands.First = 35
 	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
-	expected = vm.memory[operands.First]
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`load direct not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 50 {
+		t.Fatalf(`load direct not working, expected 50 on acc, got %v`, vm.accumulator)
 	}
 
 	//indirect
@@ -268,11 +266,11 @@ func TestMult(t *testing.T) {
 		AddressMode: shared.IMMEDIATE,
 		Operation:   shared.MULT,
 		Operands:    operands}
-	var expected shared.Word = vm.accumulator * operands.First
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`mult immediate not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 20 {
+		t.Fatalf(`mult immediate not working, expected 20 on acc, got %v`, vm.accumulator)
 	}
 
 	//direct
@@ -281,11 +279,11 @@ func TestMult(t *testing.T) {
 	operands.First = 35
 	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
-	expected = vm.accumulator * vm.memory[operands.First]
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`mult direct not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 10*5 {
+		t.Fatalf(`mult direct not working, expected 50 on acc, got %v`, vm.accumulator)
 	}
 
 	//indirect
@@ -307,11 +305,11 @@ func TestRet(t *testing.T) {
 		AddressMode: shared.IMMEDIATE,
 		Operation:   shared.RET,
 		Operands:    operands}
-	var expected uint16 = uint16(testAdress)
+
 	vm.Execute(instr)
 
-	if vm.programCounter != expected {
-		t.Fatalf(`ret not working, expected %v on pc, got %v`, expected, vm.programCounter)
+	if vm.programCounter != uint16(testAdress) {
+		t.Fatalf(`ret not working, expected %v on pc, got %v`, testAdress, vm.programCounter)
 	}
 }
 
@@ -325,11 +323,11 @@ func TestStore(t *testing.T) {
 		AddressMode: shared.DIRECT,
 		Operation:   shared.STORE,
 		Operands:    operands}
-	var expected shared.Word = vm.accumulator
+
 	vm.Execute(instr)
 
-	if vm.memory[operands.First] != expected {
-		t.Fatalf(`mult direct not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.memory[operands.First] != vm.accumulator {
+		t.Fatalf(`mult direct not working, expected 10 on memory, got %v`, vm.memory[operands.First])
 	}
 
 	//indirect
@@ -346,11 +344,11 @@ func TestSub(t *testing.T) {
 		AddressMode: shared.IMMEDIATE,
 		Operation:   shared.SUB,
 		Operands:    operands}
-	var expected shared.Word = vm.accumulator - operands.First
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`add immediate not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 50-20 {
+		t.Fatalf(`add immediate not working, expected 30 on acc, got %v`, vm.accumulator)
 	}
 
 	//direct
@@ -359,11 +357,11 @@ func TestSub(t *testing.T) {
 	operands.First = 35
 	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
-	expected = vm.accumulator - operands.First
+
 	vm.Execute(instr)
 
-	if vm.accumulator != expected {
-		t.Fatalf(`add direct not working, expected %v on acc, got %v`, expected, vm.accumulator)
+	if vm.accumulator != 0 {
+		t.Fatalf(`add direct not working, expected 0 on acc, got %v`, vm.accumulator)
 	}
 
 	//indirect

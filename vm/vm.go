@@ -13,13 +13,10 @@ type VirtualMachine struct {
 	stackPointer   uint16
 	accumulator    shared.Word
 	//OperationMode
-	operation    shared.Operation
-	// -------------------
-	instruction  uint16
-	memoryAdress uint16
-	// -------------------
-	operations   map[shared.Operation]func(shared.Operands, shared.AddressMode)
-	isRunning    bool
+	operation     shared.Operation
+	memoryAddress uint16
+	operations    map[shared.Operation]func(shared.Operands, shared.AddressMode)
+	isRunning     bool
 }
 
 func New() *VirtualMachine {
@@ -47,6 +44,7 @@ func (vm *VirtualMachine) setupOperations() {
 		shared.STORE:  vm.store,
 		shared.SUB:    vm.sub,
 		shared.WRITE:  vm.write,
+		shared.INJ:    vm.inj,
 	}
 }
 
@@ -93,38 +91,50 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 		vm.Execute(currentInstruction)
 		vm.programCounter++
 	}
-
+  
 	vm.programCounter = 0
 }
+func extractAddressMode(instr shared.Instruction) shared.AddressMode {
+	addressModeBits := int(instr.Operation) >> 4
 
-// [deprecated] - mover para assembler talvez
-// func extractAddressMode(instr shared.Instruction) shared.AddressMode {
-// 	addressModeBits := int(instr.Operation) >> 4
+	addressModes := map[uint16]shared.AddressMode{
+		0b01_00: shared.DIRECT,
+		0b10_00: shared.INDIRECT,
+		0b11_00: shared.IMMEDIATE,
+		0b01_10: shared.DIRECT_INDIRECT,
+		0b10_01: shared.INDIRECT_DIRECT,
+		0b01_11: shared.DIRECT_IMMEDIATE,
+		0b10_11: shared.INDIRECT_IMMEDIATE,
+	}
 
-// 	addressModes := map[uint16]shared.AddressMode{
-// 		0b000: shared.DIRECT,
-// 		0b001: shared.INDIRECT_01,
-// 		0b010: shared.INDIRECT_10,
-// 		0b011: shared.INDIRECT_11,
-// 		0b100: shared.IMMEDIATE,
-// 	}
+	mode, ok := addressModes[uint16(addressModeBits)]
+	if !ok {
+		panic("invalid address mode in instruction")
+	}
 
-// 	mode, ok := addressModes[uint16(addressModeBits)]
-// 	if !ok {
-// 		panic("invalid address mode in instruction")
-// 	}
+	return mode
+}
 
-// 	return mode
-// }
-
-// func extractOpCode(instr shared.Instruction) shared.Operation {
-// 	return instr.Operation % 16
-// }
+func extractOpCode(instr shared.Instruction) shared.Operation {
+	return instr.Operation % 16
+}
 
 // -- Operations
 
 func (vm *VirtualMachine) add(operands shared.Operands, mode shared.AddressMode) {
-	vm.accumulator = vm.accumulator + operands.First
+	switch mode {
+	case shared.IMMEDIATE:
+		vm.accumulator += operands.First
+
+	case shared.DIRECT:
+		vm.accumulator += vm.memory[operands.First]
+
+	case shared.INDIRECT:
+		vm.accumulator += vm.memory[vm.memoryAddress]
+
+	default:
+		panic("Incorrect address mode on ADD operation")
+	}
 }
 
 func (vm *VirtualMachine) br(operands shared.Operands, mode shared.AddressMode) {
@@ -184,5 +194,9 @@ func (vm *VirtualMachine) sub(operands shared.Operands, mode shared.AddressMode)
 }
 
 func (vm *VirtualMachine) write(operands shared.Operands, mode shared.AddressMode) {
+	panic("not implemented")
+}
+
+func (vm *VirtualMachine) inj(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }

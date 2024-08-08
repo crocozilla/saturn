@@ -10,10 +10,12 @@ type AddressMode uint8
 
 const (
 	DIRECT AddressMode = iota
-	INDIRECT_01
-	INDIRECT_10
-	INDIRECT_11
+	INDIRECT
 	IMMEDIATE
+	DIRECT_INDIRECT
+	DIRECT_IMMEDIATE
+	INDIRECT_DIRECT
+	INDIRECT_IMMEDIATE
 )
 
 type Instruction struct {
@@ -46,6 +48,7 @@ const (
 	STORE  Operation = 7
 	SUB    Operation = 6
 	WRITE  Operation = 8
+	INJ    Operation = 9
 )
 
 // string -> Operation -> func

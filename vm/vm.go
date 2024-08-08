@@ -97,9 +97,9 @@ func extractAddressMode(instr shared.Instruction) shared.AddressMode {
 	addressModeBits := int(instr.Operation) >> 4
 
 	addressModes := map[uint16]shared.AddressMode{
-		0b00_01: shared.DIRECT,
-		0b00_10: shared.INDIRECT,
-		0b00_11: shared.IMMEDIATE,
+		0b01_00: shared.DIRECT,
+		0b10_00: shared.INDIRECT,
+		0b11_00: shared.IMMEDIATE,
 		0b01_10: shared.DIRECT_INDIRECT,
 		0b10_01: shared.INDIRECT_DIRECT,
 		0b01_11: shared.DIRECT_IMMEDIATE,

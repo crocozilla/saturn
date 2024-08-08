@@ -114,8 +114,8 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 // 		0b00_10: shared.IMMEDIATE,
 //		0b00_01: direct_indirect,
 //		0b01_00: indirect_direct,
-//		0b10_00: immediate_direct,
-//		0b10_01: immediate_indirect,
+//		0b00_10: direct_immediate,
+//		0b01_10: indirect_immediate,
 
 // 	mode, ok := addressModes[uint16(addressModeBits)]
 // 	if !ok {

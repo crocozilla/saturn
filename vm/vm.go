@@ -93,32 +93,30 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 	}
 }
 
-// func extractAddressMode(instr shared.Instruction) shared.AddressMode {
-// 	addressModeBits := int(instr.Operation) >> 4  // TODO: ESTA LINHA ESTA ERRADA, MUDAR
+func extractAddressMode(instr shared.Instruction) shared.AddressMode {
+	addressModeBits := int(instr.Operation) >> 4
 
-// 	addressModes := map[uint16]shared.AddressMode{
-// 		0b00_00: shared.DIRECT,
-// 		0b00_01: shared.INDIRECT,
-// 		0b00_10: shared.IMMEDIATE,
-//		0b00_01: shared.DIRECT_INDIRECT,
-//		0b01_00: shared.INDIRECT_DIRECT,
-//		0b00_10: shared.DIRECT_IMMEDIATE,
-//		0b01_10: shared.INDIRECT_IMMEDIATE,
-// 	}
-// 	}
-// 	}
+	addressModes := map[uint16]shared.AddressMode{
+		0b00_01: shared.DIRECT,
+		0b00_10: shared.INDIRECT,
+		0b00_11: shared.IMMEDIATE,
+		0b01_10: shared.DIRECT_INDIRECT,
+		0b10_01: shared.INDIRECT_DIRECT,
+		0b01_11: shared.DIRECT_IMMEDIATE,
+		0b10_11: shared.INDIRECT_IMMEDIATE,
+	}
 
-// 	mode, ok := addressModes[uint16(addressModeBits)]
-// 	if !ok {
-// 		panic("invalid address mode in instruction")
-// 	}
+	mode, ok := addressModes[uint16(addressModeBits)]
+	if !ok {
+		panic("invalid address mode in instruction")
+	}
 
-// 	return mode
-// }
+	return mode
+}
 
-// func extractOpCode(instr shared.Instruction) shared.Operation {
-// 	return instr.Operation % 16
-// }
+func extractOpCode(instr shared.Instruction) shared.Operation {
+	return instr.Operation % 16
+}
 
 // -- Operations
 

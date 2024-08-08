@@ -25,6 +25,7 @@ func TestAdd(t *testing.T) {
 	vm.accumulator = 0
 	vm.memory[35] = 50
 	operands.First = 35
+	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
 	expected = vm.accumulator + vm.memory[operands.First]
 	vm.Execute(instr)
@@ -99,7 +100,7 @@ func TestBrpos(t *testing.T) {
 	vm.memory[35] = 50
 	instr := shared.Instruction{
 		AddressMode: shared.DIRECT,
-		Operation:   shared.BRNEG,
+		Operation:   shared.BRPOS,
 		Operands:    operands}
 	var expected shared.Word = vm.memory[operands.First]
 	vm.Execute(instr)
@@ -129,7 +130,7 @@ func TestBrzero(t *testing.T) {
 	vm.memory[35] = 50
 	instr := shared.Instruction{
 		AddressMode: shared.DIRECT,
-		Operation:   shared.BRNEG,
+		Operation:   shared.BRZERO,
 		Operands:    operands}
 	var expected shared.Word = vm.memory[operands.First]
 	vm.Execute(instr)
@@ -187,7 +188,7 @@ func TestCall(t *testing.T) {
 }
 
 func TestCopy(t *testing.T) {
-	panic("not implemented")
+	t.Fatalf(`copy testing not implemented`)
 }
 
 func TestDivide(t *testing.T) {
@@ -211,6 +212,7 @@ func TestDivide(t *testing.T) {
 	vm.accumulator = 10
 	vm.memory[35] = 5
 	operands.First = 35
+	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
 	expected = vm.accumulator / vm.memory[operands.First]
 	vm.Execute(instr)
@@ -243,6 +245,7 @@ func TestLoad(t *testing.T) {
 	vm.accumulator = 0
 	vm.memory[35] = 50
 	operands.First = 35
+	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
 	expected = vm.memory[operands.First]
 	vm.Execute(instr)
@@ -276,6 +279,7 @@ func TestMult(t *testing.T) {
 	vm.accumulator = 10
 	vm.memory[35] = 5
 	operands.First = 35
+	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
 	expected = vm.accumulator * vm.memory[operands.First]
 	vm.Execute(instr)
@@ -289,7 +293,7 @@ func TestMult(t *testing.T) {
 }
 
 func TestRead(t *testing.T) {
-	panic("not implemented")
+	t.Fatalf(`read testing not implemented`)
 }
 
 func TestRet(t *testing.T) {
@@ -353,6 +357,7 @@ func TestSub(t *testing.T) {
 	vm.accumulator = 50
 	vm.memory[35] = 50
 	operands.First = 35
+	instr.Operands = operands
 	instr.AddressMode = shared.DIRECT
 	expected = vm.accumulator - operands.First
 	vm.Execute(instr)
@@ -366,5 +371,5 @@ func TestSub(t *testing.T) {
 }
 
 func TestWrite(t *testing.T) {
-	panic("not implemented")
+	t.Fatalf(`write testing not implemented`)
 }

@@ -2,6 +2,7 @@ package vm
 
 import (
 	"errors"
+	"fmt"
 	"saturn/shared"
 )
 
@@ -93,7 +94,6 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 	}
 }
 
-
 // [deprecated] - mover para assembler talvez
 // func extractAddressMode(instr shared.Instruction) shared.AddressMode {
 // 	addressModeBits := int(instr.Operation) >> 4
@@ -121,7 +121,14 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 // -- Operations
 
 func (vm *VirtualMachine) add(operands shared.Operands, mode shared.AddressMode) {
-	vm.accumulator = vm.accumulator + operands.First
+	switch mode {
+	case shared.IMMEDIATE:
+		vm.accumulator += operands.First
+
+	case shared.DIRECT:
+		fmt.Println(operands.First)
+		vm.accumulator += vm.memory[operands.First]
+	}
 }
 
 func (vm *VirtualMachine) br(operands shared.Operands, mode shared.AddressMode) {

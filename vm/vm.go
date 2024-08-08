@@ -44,6 +44,7 @@ func (vm *VirtualMachine) setupOperations() {
 		shared.STORE:  vm.store,
 		shared.SUB:    vm.sub,
 		shared.WRITE:  vm.write,
+		shared.INJ:    vm.inj,
 	}
 }
 
@@ -187,5 +188,9 @@ func (vm *VirtualMachine) sub(operands shared.Operands, mode shared.AddressMode)
 }
 
 func (vm *VirtualMachine) write(operands shared.Operands, mode shared.AddressMode) {
+	panic("not implemented")
+}
+
+func (vm *VirtualMachine) inj(operands shared.Operands, mode shared.AddressMode) {
 	panic("not implemented")
 }

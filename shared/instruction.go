@@ -48,6 +48,7 @@ const (
 	STORE  Operation = 7
 	SUB    Operation = 6
 	WRITE  Operation = 8
+	INJ    Operation = 9
 )
 
 // string -> Operation -> func

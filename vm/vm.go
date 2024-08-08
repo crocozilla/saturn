@@ -13,10 +13,10 @@ type VirtualMachine struct {
 	stackPointer   uint16
 	accumulator    shared.Word
 	//OperationMode
-	operation    shared.Operation
-	memoryAdress uint16
-	operations   map[shared.Operation]func(shared.Operands, shared.AddressMode)
-	isRunning    bool
+	operation     shared.Operation
+	memoryAddress uint16
+	operations    map[shared.Operation]func(shared.Operands, shared.AddressMode)
+	isRunning     bool
 }
 
 func New() *VirtualMachine {

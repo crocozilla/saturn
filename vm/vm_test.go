@@ -24,8 +24,7 @@ func TestAdd(t *testing.T) {
 	//direct
 	vm.accumulator = 0
 	vm.memory[35] = 50
-	operands.First = 35
-	instr.Operands = operands
+	instr.Operands.First = 35
 	instr.AddressMode = shared.DIRECT
 
 	vm.Execute(instr)
@@ -37,7 +36,7 @@ func TestAdd(t *testing.T) {
 	//indirect
 	vm.accumulator = 0
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
@@ -66,7 +65,7 @@ func TestBr(t *testing.T) {
 
 	//indirect
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
@@ -96,7 +95,7 @@ func TestBrneg(t *testing.T) {
 
 	//indirect
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
@@ -136,7 +135,7 @@ func TestBrpos(t *testing.T) {
 
 	//indirect
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
@@ -175,7 +174,7 @@ func TestBrzero(t *testing.T) {
 
 	//indirect
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
@@ -226,7 +225,7 @@ func TestCall(t *testing.T) {
 	}
 
 	//indirect
-	vm.memoryAdress = 40
+	vm.memoryAddress = 40
 	vm.memory[40] = 20
 	instr.AddressMode = shared.INDIRECT
 
@@ -255,10 +254,9 @@ func TestCopy(t *testing.T) {
 	}
 
 	//direct_indirect
-	vm.memoryAdress = 50
+	vm.memoryAddress = 50
 	vm.memory[50] = 60
-	operands.First = 70
-	instr.Operands = operands
+	instr.Operands.First = 70
 	instr.AddressMode = shared.DIRECT_INDIRECT
 
 	vm.Execute(instr)
@@ -267,9 +265,8 @@ func TestCopy(t *testing.T) {
 	}
 
 	//direct_immediate
-	operands.First = 30
-	operands.Second = 40
-	instr.Operands = operands
+	instr.Operands.First = 30
+	instr.Operands.Second = 40
 	instr.AddressMode = shared.DIRECT_IMMEDIATE
 
 	vm.Execute(instr)
@@ -278,10 +275,9 @@ func TestCopy(t *testing.T) {
 	}
 
 	//indirect_direct
-	vm.memoryAdress = 90
-	operands.Second = 40
+	vm.memoryAddress = 90
 	vm.memory[40] = 20
-	instr.Operands = operands
+	instr.Operands.Second = 40
 	instr.AddressMode = shared.INDIRECT_DIRECT
 
 	vm.Execute(instr)
@@ -292,9 +288,9 @@ func TestCopy(t *testing.T) {
 	//both indirect doesnt make sense to test
 
 	//indirect_immediate
-	vm.memoryAdress = 50
+	vm.memoryAddress = 50
 	operands.Second = 100
-	instr.Operands = operands
+	instr.Operands.Second = 100
 	instr.AddressMode = shared.INDIRECT_DIRECT
 
 	vm.Execute(instr)
@@ -323,8 +319,7 @@ func TestDivide(t *testing.T) {
 	//direct
 	vm.accumulator = 10
 	vm.memory[35] = 5
-	operands.First = 35
-	instr.Operands = operands
+	instr.Operands.First = 35
 	instr.AddressMode = shared.DIRECT
 
 	vm.Execute(instr)
@@ -336,7 +331,7 @@ func TestDivide(t *testing.T) {
 	//indirect
 	vm.accumulator = 20
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
@@ -365,8 +360,7 @@ func TestLoad(t *testing.T) {
 	//direct
 	vm.accumulator = 0
 	vm.memory[35] = 50
-	operands.First = 35
-	instr.Operands = operands
+	instr.Operands.First = 35
 	instr.AddressMode = shared.DIRECT
 
 	vm.Execute(instr)
@@ -377,7 +371,7 @@ func TestLoad(t *testing.T) {
 
 	//indirect
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
@@ -407,8 +401,7 @@ func TestMult(t *testing.T) {
 	//direct
 	vm.accumulator = 10
 	vm.memory[35] = 5
-	operands.First = 35
-	instr.Operands = operands
+	instr.Operands.First = 35
 	instr.AddressMode = shared.DIRECT
 
 	vm.Execute(instr)
@@ -420,7 +413,7 @@ func TestMult(t *testing.T) {
 	//indirect
 	vm.accumulator = 2
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
@@ -473,13 +466,13 @@ func TestStore(t *testing.T) {
 	//indirect
 	vm.accumulator = 25
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
 
-	if vm.memory[vm.memoryAdress] != 25 {
-		t.Fatalf(`store indirect not working, expected 25 on memory, got %v`, vm.memory[vm.memoryAdress])
+	if vm.memory[vm.memoryAddress] != 25 {
+		t.Fatalf(`store indirect not working, expected 25 on memory, got %v`, vm.memory[vm.memoryAddress])
 	}
 }
 
@@ -497,26 +490,25 @@ func TestSub(t *testing.T) {
 	vm.Execute(instr)
 
 	if vm.accumulator != 30 {
-		t.Fatalf(`add immediate not working, expected 30 on acc, got %v`, vm.accumulator)
+		t.Fatalf(`sub immediate not working, expected 30 on acc, got %v`, vm.accumulator)
 	}
 
 	//direct
 	vm.accumulator = 50
 	vm.memory[35] = 50
-	operands.First = 35
-	instr.Operands = operands
+	instr.Operands.First = 35
 	instr.AddressMode = shared.DIRECT
 
 	vm.Execute(instr)
 
 	if vm.accumulator != 0 {
-		t.Fatalf(`add direct not working, expected 0 on acc, got %v`, vm.accumulator)
+		t.Fatalf(`sub direct not working, expected 0 on acc, got %v`, vm.accumulator)
 	}
 
 	//indirect
 	vm.accumulator = 10
 	vm.memory[30] = 10
-	vm.memoryAdress = 30
+	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
@@ -541,7 +533,7 @@ func TestInj(t *testing.T) {
 
 	vm.Execute(instr)
 
-	if vm.memoryAdress != 20 {
-		t.Fatalf(`inj not working, expected 20 on memory register, got %v`, vm.memoryAdress)
+	if vm.memoryAddress != 20 {
+		t.Fatalf(`inj not working, expected 20 on memory register, got %v`, vm.memoryAddress)
 	}
 }

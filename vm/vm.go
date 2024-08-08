@@ -85,15 +85,15 @@ func (vm *VirtualMachine) Execute(instr shared.Instruction) {
 
 func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 	vm.isRunning = true
-	currentInstruction := program[vm.programCounter]
 
 	for vm.isRunning {
+		currentInstruction := program[vm.programCounter]
 		vm.Execute(currentInstruction)
 		vm.programCounter++
-		currentInstruction = program[vm.programCounter]
 	}
+  
+	vm.programCounter = 0
 }
-
 func extractAddressMode(instr shared.Instruction) shared.AddressMode {
 	addressModeBits := int(instr.Operation) >> 4
 

@@ -2,7 +2,6 @@ package vm
 
 import (
 	"errors"
-	"fmt"
 	"saturn/shared"
 )
 
@@ -99,12 +98,24 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 // 	addressModeBits := int(instr.Operation) >> 4
 
 // 	addressModes := map[uint16]shared.AddressMode{
-// 		0b000: shared.DIRECT,
-// 		0b001: shared.INDIRECT_01,
-// 		0b010: shared.INDIRECT_10,
-// 		0b011: shared.INDIRECT_11,
-// 		0b100: shared.IMMEDIATE,
+// 		0b000_001: shared.DIRECT,
+// 		0b000_010: shared.INDIRECT,
+// 		0b000_100: shared.IMMEDIATE,
+//		0b001_010:  direct_indirect,
+//		0b010_001:	indirect_direct,
+//		0b100_001:	immediate_direct,
+//		0b100_010:  immediate_indirect,
 // 	}
+// 	}
+// 	}
+
+// 		0b00_00: shared.DIRECT,
+// 		0b00_01: shared.INDIRECT,
+// 		0b00_10: shared.IMMEDIATE,
+//		0b00_01: direct_indirect,
+//		0b01_00: indirect_direct,
+//		0b10_00: immediate_direct,
+//		0b10_01: immediate_indirect,
 
 // 	mode, ok := addressModes[uint16(addressModeBits)]
 // 	if !ok {
@@ -126,7 +137,6 @@ func (vm *VirtualMachine) add(operands shared.Operands, mode shared.AddressMode)
 		vm.accumulator += operands.First
 
 	case shared.DIRECT:
-		fmt.Println(operands.First)
 		vm.accumulator += vm.memory[operands.First]
 	}
 }

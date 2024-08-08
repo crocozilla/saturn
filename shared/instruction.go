@@ -10,10 +10,12 @@ type AddressMode uint8
 
 const (
 	DIRECT AddressMode = iota
-	INDIRECT_01
-	INDIRECT_10
-	INDIRECT_11
+	INDIRECT
 	IMMEDIATE
+	DIRECT_INDIRECT
+	DIRECT_IMMEDIATE
+	INDIRECT_DIRECT
+	INDIRECT_IMMEDIATE
 )
 
 type Instruction struct {

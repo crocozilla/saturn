@@ -128,6 +128,12 @@ func (vm *VirtualMachine) add(operands shared.Operands, mode shared.AddressMode)
 
 	case shared.DIRECT:
 		vm.accumulator += vm.memory[operands.First]
+
+	case shared.INDIRECT:
+		vm.accumulator += vm.memory[vm.memoryAddress]
+
+	default:
+		panic("Incorrect address mode on ADD operation")
 	}
 }
 

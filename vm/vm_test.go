@@ -71,7 +71,7 @@ func TestBr(t *testing.T) {
 	vm.Execute(instr)
 
 	if shared.Word(vm.programCounter) != 10 {
-		t.Fatalf(`br indirect not working, expected 10 on acc, got %v`, vm.programCounter)
+		t.Fatalf(`br indirect not working, expected 10 on pc, got %v`, vm.programCounter)
 	}
 }
 
@@ -101,7 +101,7 @@ func TestBrneg(t *testing.T) {
 	vm.Execute(instr)
 
 	if shared.Word(vm.programCounter) != 10 {
-		t.Fatalf(`brneg indirect not working, expected 10 on acc, got %v`, vm.programCounter)
+		t.Fatalf(`brneg indirect not working, expected 10 on pc, got %v`, vm.programCounter)
 	}
 
 	//acc >= 0
@@ -141,7 +141,7 @@ func TestBrpos(t *testing.T) {
 	vm.Execute(instr)
 
 	if shared.Word(vm.programCounter) != 10 {
-		t.Fatalf(`brpos indirect not working, expected 10 on acc, got %v`, vm.programCounter)
+		t.Fatalf(`brpos indirect not working, expected 10 on pc, got %v`, vm.programCounter)
 	}
 
 	//acc <= 0
@@ -180,7 +180,7 @@ func TestBrzero(t *testing.T) {
 	vm.Execute(instr)
 
 	if shared.Word(vm.programCounter) != 10 {
-		t.Fatalf(`brzero indirect not working, expected 10 on acc, got %v`, vm.programCounter)
+		t.Fatalf(`brzero indirect not working, expected 10 on pc, got %v`, vm.programCounter)
 	}
 
 	//acc != 0
@@ -216,7 +216,7 @@ func TestCall(t *testing.T) {
 	}
 
 	if uint16(result) != 10 {
-		t.Fatalf(`call not working, expected 10 on stack, got %v`, vm.programCounter)
+		t.Fatalf(`call not working, expected 10 on stack, got %v`, result)
 	}
 
 	//direct
@@ -260,6 +260,7 @@ func TestCopy(t *testing.T) {
 	instr.AddressMode = shared.DIRECT_INDIRECT
 
 	vm.Execute(instr)
+
 	if vm.memory[70] != 60 {
 		t.Fatalf(`copy direct_indirect not working, expected 60 on memory, got %v`, vm.memory[70])
 	}
@@ -270,6 +271,7 @@ func TestCopy(t *testing.T) {
 	instr.AddressMode = shared.DIRECT_IMMEDIATE
 
 	vm.Execute(instr)
+
 	if vm.memory[30] != 40 {
 		t.Fatalf(`copy direct_immediate not working, expected 40 on memory, got %v`, vm.memory[30])
 	}
@@ -281,7 +283,8 @@ func TestCopy(t *testing.T) {
 	instr.AddressMode = shared.INDIRECT_DIRECT
 
 	vm.Execute(instr)
-	if vm.memory[90] != vm.memory[40] {
+
+	if vm.memory[90] != 20 {
 		t.Fatalf(`copy indirect_direct not working, expected 20 on memory, got %v`, vm.memory[90])
 	}
 
@@ -289,11 +292,11 @@ func TestCopy(t *testing.T) {
 
 	//indirect_immediate
 	vm.memoryAddress = 50
-	operands.Second = 100
 	instr.Operands.Second = 100
-	instr.AddressMode = shared.INDIRECT_DIRECT
+	instr.AddressMode = shared.INDIRECT_IMMEDIATE
 
 	vm.Execute(instr)
+
 	if vm.memory[50] != 100 {
 		t.Fatalf(`copy indirect_immediate not working, expected 100 on memory, got %v`, vm.memory[50])
 	}
@@ -495,26 +498,26 @@ func TestSub(t *testing.T) {
 
 	//direct
 	vm.accumulator = 50
-	vm.memory[35] = 50
+	vm.memory[35] = 40
 	instr.Operands.First = 35
 	instr.AddressMode = shared.DIRECT
 
 	vm.Execute(instr)
 
-	if vm.accumulator != 0 {
-		t.Fatalf(`sub direct not working, expected 0 on acc, got %v`, vm.accumulator)
+	if vm.accumulator != 10 {
+		t.Fatalf(`sub direct not working, expected 10 on acc, got %v`, vm.accumulator)
 	}
 
 	//indirect
-	vm.accumulator = 10
+	vm.accumulator = 20
 	vm.memory[30] = 10
 	vm.memoryAddress = 30
 	instr.AddressMode = shared.INDIRECT
 
 	vm.Execute(instr)
 
-	if vm.accumulator != 0 {
-		t.Fatalf(`sub indirect not working, expected 0 on acc, got %v`, vm.accumulator)
+	if vm.accumulator != 10 {
+		t.Fatalf(`sub indirect not working, expected 10 on acc, got %v`, vm.accumulator)
 	}
 }
 

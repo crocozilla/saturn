@@ -195,8 +195,6 @@ func TestBrzero(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	t.Fatalf(`call testing not defined yet because program counter logic may change`)
-
 	vm := New()
 
 	//stack tests

@@ -68,7 +68,7 @@ func (vm *VirtualMachine) stackPush(value shared.Word) error {
 	return nil
 }
 
-func (vm *VirtualMachine) stackPop() (shared.Word, error) {
+func (vm *VirtualMachine) stackPop() (uint16, error) {
 	if vm.stackPointer == 0 {
 		return 0, errors.New("empty stack")
 	}
@@ -76,7 +76,7 @@ func (vm *VirtualMachine) stackPop() (shared.Word, error) {
 	address := vm.stackPointer + stackBase
 	vm.stackPointer--
 
-	return vm.memory[address], nil
+	return uint16(vm.memory[address]), nil
 }
 
 func (vm *VirtualMachine) Execute(instr shared.Instruction) {
@@ -91,7 +91,7 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 		vm.Execute(currentInstruction)
 		vm.programCounter++
 	}
-  
+
 	vm.programCounter = 0
 }
 func extractAddressMode(instr shared.Instruction) shared.AddressMode {
@@ -154,11 +154,47 @@ func (vm *VirtualMachine) brzero(operands shared.Operands, mode shared.AddressMo
 }
 
 func (vm *VirtualMachine) call(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+
+	err := vm.stackPush(shared.Word(vm.programCounter))
+	if err != nil {
+		panic(err)
+	}
+
+	switch mode {
+	case shared.DIRECT:
+		vm.programCounter = uint16(vm.memory[operands.First])
+
+	case shared.INDIRECT:
+		vm.programCounter = uint16(vm.memory[vm.memoryAddress])
+
+	default:
+		panic("incorrect address mode on CALL operation")
+	}
 }
 
 func (vm *VirtualMachine) copy(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+	switch mode {
+	case shared.DIRECT:
+		vm.memory[operands.First] = vm.memory[operands.Second]
+
+	case shared.DIRECT_IMMEDIATE:
+		vm.memory[operands.First] = operands.Second
+
+	case shared.DIRECT_INDIRECT:
+		vm.memory[operands.First] = vm.memory[vm.memoryAddress]
+
+	case shared.INDIRECT:
+		break
+
+	case shared.INDIRECT_IMMEDIATE:
+		vm.memory[vm.memoryAddress] = operands.Second
+
+	case shared.INDIRECT_DIRECT:
+		vm.memory[vm.memoryAddress] = vm.memory[operands.Second]
+
+	default:
+		panic("incorrect address mode on COPY operation")
+	}
 }
 
 func (vm *VirtualMachine) divide(operands shared.Operands, mode shared.AddressMode) {
@@ -190,7 +226,12 @@ func (vm *VirtualMachine) read(operands shared.Operands, mode shared.AddressMode
 }
 
 func (vm *VirtualMachine) ret(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+	var err error
+	vm.programCounter, err = vm.stackPop()
+
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (vm *VirtualMachine) stop(operands shared.Operands, mode shared.AddressMode) {

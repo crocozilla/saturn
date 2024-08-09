@@ -173,42 +173,28 @@ func (vm *VirtualMachine) call(operands shared.Operands, mode shared.AddressMode
 }
 
 func (vm *VirtualMachine) copy(operands shared.Operands, mode shared.AddressMode) {
-
-	var destAddress shared.Word
-	var srcAddress shared.Word
-
-	// pegar informação com base no modo de endereçamento
 	switch mode {
 	case shared.DIRECT:
-		destAddress = vm.memory[operands.First]
-		srcAddress = vm.memory[operands.Second]
+		vm.memory[operands.First] = vm.memory[operands.Second]
 
 	case shared.DIRECT_IMMEDIATE:
-		destAddress = vm.memory[operands.First]
-		srcAddress = operands.Second
+		vm.memory[operands.First] = operands.Second
 
 	case shared.DIRECT_INDIRECT:
-		destAddress = vm.memory[operands.First]
-		srcAddress = vm.memory[vm.memoryAddress]
+		vm.memory[operands.First] = vm.memory[vm.memoryAddress]
 
 	case shared.INDIRECT:
 		break
 
 	case shared.INDIRECT_IMMEDIATE:
-		destAddress = vm.memory[vm.memoryAddress]
-		srcAddress = operands.Second
+		vm.memory[vm.memoryAddress] = operands.Second
 
 	case shared.INDIRECT_DIRECT:
-		destAddress = vm.memory[vm.memoryAddress]
-		srcAddress = vm.memory[operands.Second]
+		vm.memory[vm.memoryAddress] = vm.memory[operands.Second]
 
 	default:
 		panic("incorrect address mode on COPY operation")
 	}
-
-	// usa a informação conforme a semântica da operação
-	vm.memory[destAddress] = vm.memory[srcAddress]
-
 }
 
 func (vm *VirtualMachine) divide(operands shared.Operands, mode shared.AddressMode) {

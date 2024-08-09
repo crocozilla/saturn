@@ -80,6 +80,7 @@ func (vm *VirtualMachine) stackPop() (uint16, error) {
 }
 
 func (vm *VirtualMachine) Execute(instr shared.Instruction) {
+	vm.programCounter++
 	vm.operations[instr.Operation](instr.Operands, instr.AddressMode)
 }
 
@@ -89,7 +90,6 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 	for vm.isRunning {
 		currentInstruction := program[vm.programCounter]
 		vm.Execute(currentInstruction)
-		vm.programCounter++
 	}
 
 	vm.programCounter = 0

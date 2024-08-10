@@ -138,19 +138,24 @@ func (vm *VirtualMachine) add(operands shared.Operands, mode shared.AddressMode)
 }
 
 func (vm *VirtualMachine) br(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+	vm.programCounter = uint16(operands.First)
 }
 
 func (vm *VirtualMachine) brneg(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
-}
+	if vm.accumulator < 0 {
+		vm.br(operands, mode)
+	}
 
 func (vm *VirtualMachine) brpos(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+	if vm.accumulator > 0 {
+		vm.br(operands, mode)
+	}
 }
 
 func (vm *VirtualMachine) brzero(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+	if vm.accumulator == 0 {
+		vm.br(operands, mode)
+	}
 }
 
 func (vm *VirtualMachine) call(operands shared.Operands, mode shared.AddressMode) {

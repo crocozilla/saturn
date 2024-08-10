@@ -195,8 +195,6 @@ func TestBrzero(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	t.Fatalf(`call testing not defined yet because program counter logic may change`)
-
 	vm := New()
 
 	//stack tests
@@ -215,8 +213,8 @@ func TestCall(t *testing.T) {
 		t.Fatalf(`call not working, stack is empty (should have program counter)`)
 	}
 
-	if uint16(result) != 10 {
-		t.Fatalf(`call not working, expected 10 on stack, got %v`, result)
+	if uint16(result) != 11 {
+		t.Fatalf(`call not working, expected 11 on stack, got %v`, result)
 	}
 
 	//direct

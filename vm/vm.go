@@ -225,7 +225,7 @@ func (vm *VirtualMachine) load(operands shared.Operands, mode shared.AddressMode
 		vm.accumulator = vm.memory[vm.memoryAddress]
 
 	default:
-		panic("Incorrect address mode operation or invalid memory address on LOAD operation")
+		panic("incorrect address mode on LOAD operation")
 	}
 }
 
@@ -259,7 +259,7 @@ func (vm *VirtualMachine) store(operands shared.Operands, mode shared.AddressMod
 		vm.memory[vm.memoryAddress] = vm.accumulator
 
 	default:
-		panic("Incorrect address mode or invalid memory address on STORE operation")
+		panic("incorrect address mode on STORE operation")
 	}
 }
 

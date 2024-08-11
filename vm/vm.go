@@ -214,7 +214,19 @@ func (vm *VirtualMachine) divide(operands shared.Operands, mode shared.AddressMo
 }
 
 func (vm *VirtualMachine) load(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+	switch mode {
+	case shared.IMMEDIATE:
+		vm.accumulator = operands.First
+
+	case shared.DIRECT:
+		vm.accumulator = vm.memory[operands.First]
+
+	case shared.INDIRECT:
+		vm.accumulator = vm.memory[vm.memoryAddress]
+
+	default:
+		panic("incorrect address mode on LOAD operation")
+	}
 }
 
 func (vm *VirtualMachine) mult(operands shared.Operands, mode shared.AddressMode) {
@@ -239,7 +251,16 @@ func (vm *VirtualMachine) stop(operands shared.Operands, mode shared.AddressMode
 }
 
 func (vm *VirtualMachine) store(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+	switch mode {
+	case shared.DIRECT:
+		vm.memory[operands.First] = vm.accumulator
+
+	case shared.INDIRECT:
+		vm.memory[vm.memoryAddress] = vm.accumulator
+
+	default:
+		panic("incorrect address mode on STORE operation")
+	}
 }
 
 func (vm *VirtualMachine) sub(operands shared.Operands, mode shared.AddressMode) {

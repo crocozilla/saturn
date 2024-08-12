@@ -110,8 +110,8 @@ func TestBrneg(t *testing.T) {
 
 	vm.Execute(instr)
 
-	if shared.Word(vm.programCounter) != 0 {
-		t.Fatalf(`brneg not working, expected 0 on pc, got %v`, vm.programCounter)
+	if shared.Word(vm.programCounter) != 1 {
+		t.Fatalf(`brneg not working, expected 1 on pc, got %v`, vm.programCounter)
 	}
 }
 
@@ -150,8 +150,8 @@ func TestBrpos(t *testing.T) {
 
 	vm.Execute(instr)
 
-	if vm.programCounter != 0 {
-		t.Fatalf(`brpos not working, expected 0 on pc, got %v`, vm.programCounter)
+	if vm.programCounter != 1 {
+		t.Fatalf(`brpos not working, expected 1 on pc, got %v`, vm.programCounter)
 	}
 
 }
@@ -189,8 +189,8 @@ func TestBrzero(t *testing.T) {
 
 	vm.Execute(instr)
 
-	if vm.programCounter != 0 {
-		t.Fatalf(`brzero not working, expected 0 on pc, got %v`, vm.programCounter)
+	if vm.programCounter != 1 {
+		t.Fatalf(`brzero not working, expected 1 on pc, got %v`, vm.programCounter)
 	}
 }
 

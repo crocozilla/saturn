@@ -5,6 +5,13 @@ import (
 	"saturn/shared"
 )
 
+type UseMode uint8
+
+const (
+	NORMAL UseMode = iota
+	DEBUG
+)
+
 const stackBase uint16 = 2 // 2 é definido no pdf do trabalho
 
 type VirtualMachine struct {
@@ -12,11 +19,11 @@ type VirtualMachine struct {
 	programCounter uint16
 	stackPointer   uint16
 	accumulator    shared.Word
-	//OperationMode
-	operation     shared.Operation
-	memoryAddress uint16
-	operations    map[shared.Operation]func(shared.Operands, shared.AddressMode)
-	isRunning     bool
+	useMode        UseMode
+	operation      shared.Operation
+	memoryAddress  uint16
+	operations     map[shared.Operation]func(shared.Operands, shared.AddressMode)
+	isRunning      bool
 }
 
 func New() *VirtualMachine {
@@ -24,6 +31,30 @@ func New() *VirtualMachine {
 	vm.setupOperations()
 	vm.stackInit()
 	return vm
+}
+
+func (vm *VirtualMachine) Memory() [128]shared.Word {
+	return vm.memory
+}
+
+func (vm *VirtualMachine) PC() uint16 {
+	return vm.programCounter
+}
+
+func (vm *VirtualMachine) SP() uint16 {
+	return vm.stackPointer
+}
+
+func (vm *VirtualMachine) Acumulator() shared.Word {
+	return vm.accumulator
+}
+
+func (vm *VirtualMachine) Operation() shared.Operation {
+	return vm.operation
+}
+
+func (vm *VirtualMachine) MemoryAddress() uint16 {
+	return vm.memoryAddress
 }
 
 func (vm *VirtualMachine) setupOperations() {
@@ -94,6 +125,7 @@ func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 
 	vm.programCounter = 0
 }
+
 func extractAddressMode(instr shared.Instruction) shared.AddressMode {
 	addressModeBits := int(instr.Operation) >> 4
 
@@ -143,10 +175,10 @@ func (vm *VirtualMachine) br(operands shared.Operands, mode shared.AddressMode) 
 	switch mode {
 	case shared.DIRECT:
 		targetAddress = uint16(vm.memory[operands.First])
-		
+
 	case shared.INDIRECT:
 		targetAddress = uint16(vm.memory[vm.memoryAddress])
-		
+
 	default:
 		panic("incorrect address mode on BR operation")
 	}

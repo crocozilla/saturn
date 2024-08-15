@@ -138,7 +138,6 @@ func (vm *VirtualMachine) add(operands shared.Operands, mode shared.AddressMode)
 }
 
 func (vm *VirtualMachine) br(operands shared.Operands, mode shared.AddressMode) {
-<<<<<<< Updated upstream
 	var targetAddress uint16
 
 	switch mode {
@@ -153,18 +152,6 @@ func (vm *VirtualMachine) br(operands shared.Operands, mode shared.AddressMode) 
 	}
 
 	vm.programCounter = targetAddress
-=======
-	switch mode {
-	case shared.DIRECT:
-		vm.programCounter = vm.memory[operands.First]
-
-	case shared.INDIRECT:
-		vm.programCounter = vm.memory[vm.memoryAddress]
-
-	default:
-		panic("incorrect address mode on BR operation")
-	}
->>>>>>> Stashed changes
 }
 
 func (vm *VirtualMachine) brneg(operands shared.Operands, mode shared.AddressMode) {
@@ -181,20 +168,7 @@ func (vm *VirtualMachine) brpos(operands shared.Operands, mode shared.AddressMod
 
 func (vm *VirtualMachine) brzero(operands shared.Operands, mode shared.AddressMode) {
 	if vm.accumulator == 0 {
-<<<<<<< Updated upstream
 		vm.br(operands, mode)
-=======
-		switch mode {
-		case shared.DIRECT:	
-			vm.programCounter = vm.memory[operands.First]
-
-		case shared.INDIRECT:
-			vm.programCounter = vm.memory[vm.memoryAddress]
-
-		default:
-			panic("incorrect address mode on BRZERO operation")
-		}
->>>>>>> Stashed changes
 	}
 }
 

@@ -98,7 +98,7 @@ func ExtractAddressMode(operation Word) AddressMode {
 }
 
 func ExtractOpCode(operation Word) Operation {
-	return Operation(operation % 17)
+	return Operation(operation & 0b0000000_00_00_11111)
 }
 
 func (i Instruction) String() string {

@@ -176,10 +176,19 @@ func (vm *VirtualMachine) structureInstruction(pc uint16) shared.Instruction {
 	address := pc + programBase
 	operation_info := vm.memory[address]
 
+	var operands shared.Operands
+
+	if address+1 < uint16(len(vm.memory)) {
+		operands.First = vm.memory[address+1]
+	}
+	if address+2 < uint16(len(vm.memory)) {
+		operands.Second = vm.memory[address+2] // might be trash, but when it is, it won`t be used by the instruction
+	}
+
 	instr := shared.Instruction{
 		AddressMode: shared.ExtractAddressMode(operation_info),
 		Operation:   shared.ExtractOpCode(operation_info),
-		Operands:    shared.Operands{First: vm.memory[address+1], Second: vm.memory[address+2]}, // might be trash, but when it is, it won`t be used by the instruction
+		Operands:    operands,
 	}
 
 	return instr

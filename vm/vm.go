@@ -2,7 +2,6 @@ package vm
 
 import (
 	"errors"
-	"fmt"
 	"saturn/shared"
 )
 
@@ -17,10 +16,14 @@ type VirtualMachine struct {
 	accumulator    shared.Word
 	operation      shared.Operation
 	memoryAddress  uint16
-	operations     map[shared.Operation]func(shared.Operands, shared.AddressMode)
+	opImpls        map[shared.Operation]func(shared.Operands, shared.AddressMode)
 	opSizes        map[shared.Operation]uint16
 	isRunning      bool
 	programEnd     uint16
+	io             struct {
+		input  shared.Word
+		output shared.Word
+	}
 }
 
 func New() *VirtualMachine {
@@ -73,13 +76,20 @@ func (vm *VirtualMachine) InsertProgram(program []shared.Word) {
 	var i uint16
 
 	for i = 0; i < uint16(len(program)); i++ {
-		vm.memory[programBase+i] = program[i]
+		putAddress := programBase + i
+
+		if putAddress >= uint16(len(vm.memory)) {
+			panic("the program exceeds the memory space")
+		}
+
+		vm.memory[putAddress] = program[i]
 	}
+
 	vm.programEnd = i + programBase
 }
 
 func (vm *VirtualMachine) setupOperations() {
-	vm.operations = map[shared.Operation]func(shared.Operands, shared.AddressMode){
+	vm.opImpls = map[shared.Operation]func(shared.Operands, shared.AddressMode){
 		shared.ADD:    vm.add,
 		shared.BR:     vm.br,
 		shared.BRNEG:  vm.brneg,
@@ -123,13 +133,11 @@ func (vm *VirtualMachine) setupOpSizes() {
 }
 
 func (vm *VirtualMachine) stackInit() {
-	//var stackLimit uint16 = 10                     // max elements
 	vm.memory[stackBase] = shared.Word(stackLimit) // primeiro elemento da pilha é seu limite (definido no pdf)
 }
 
 func (vm *VirtualMachine) stackPush(value shared.Word) error {
 	vm.stackPointer++
-	//	stackLimit := uint16(vm.memory[stackBase])
 
 	if vm.stackPointer > stackLimit {
 		vm.stackPointer = 0
@@ -172,43 +180,36 @@ func (vm *VirtualMachine) Reset() {
 	vm.isRunning = true
 }
 
-func (vm *VirtualMachine) structureInstruction(pc uint16) shared.Instruction {
-	address := pc + programBase
-	operation_info := vm.memory[address]
+func (vm *VirtualMachine) decodeInst() shared.Instruction {
+	address := programBase + vm.programCounter
+	operationInfo := vm.memory[address]
 
 	var operands shared.Operands
 
-	if address+1 < uint16(len(vm.memory)) {
-		operands.First = vm.memory[address+1]
-	}
-	if address+2 < uint16(len(vm.memory)) {
-		operands.Second = vm.memory[address+2] // might be trash, but when it is, it won`t be used by the instruction
-	}
+	operands.First = vm.memory[address+1]
+	operands.Second = vm.memory[address+2] // might be trash, but when it is, it won`t be used by the instruction
 
-	instr := shared.Instruction{
-		AddressMode: shared.ExtractAddressMode(operation_info),
-		Operation:   shared.ExtractOpCode(operation_info),
+	return shared.Instruction{
+		AddressMode: shared.ExtractAddressMode(operationInfo),
+		Operation:   shared.ExtractOpCode(operationInfo),
 		Operands:    operands,
 	}
-
-	return instr
 }
 
-func (vm *VirtualMachine) Execute(pc uint16) {
-	instr := vm.structureInstruction(pc)
-	fmt.Println(instr.String())
+func (vm *VirtualMachine) Execute() {
+	instr := vm.decodeInst()
 
 	vm.operation = instr.Operation
 	vm.programCounter += vm.opSizes[instr.Operation]
 
-	vm.operations[instr.Operation](instr.Operands, instr.AddressMode)
+	vm.opImpls[instr.Operation](instr.Operands, instr.AddressMode)
 }
 
 func (vm *VirtualMachine) ExecuteAll() {
 	vm.Reset()
 
 	for vm.isRunning {
-		vm.Execute(vm.programCounter)
+		vm.Execute()
 	}
 }
 

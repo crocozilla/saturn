@@ -18,6 +18,7 @@ const (
 	DIRECT_IMMEDIATE
 	INDIRECT_DIRECT
 	INDIRECT_IMMEDIATE
+	UNUSED
 )
 
 type Instruction struct {
@@ -87,6 +88,7 @@ func ExtractAddressMode(operation Word) AddressMode {
 		0b10_01: INDIRECT_DIRECT,
 		0b01_11: DIRECT_IMMEDIATE,
 		0b10_11: INDIRECT_IMMEDIATE,
+		0b00_00: UNUSED,
 	}
 
 	mode, ok := addressModes[uint16(addressModeBits)]

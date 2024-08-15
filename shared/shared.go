@@ -18,6 +18,7 @@ const (
 	DIRECT_IMMEDIATE
 	INDIRECT_DIRECT
 	INDIRECT_IMMEDIATE
+	UNUSED
 )
 
 type Instruction struct {
@@ -59,8 +60,8 @@ type BinInstruction [3]Word
 // Binary Instruction to Instruction
 func Btoi(b BinInstruction) Instruction {
 	return Instruction{
-		AddressMode: extractAddressMode(b[0]),
-		Operation:   extractOpCode(b[0]),
+		AddressMode: ExtractAddressMode(b[0]),
+		Operation:   ExtractOpCode(b[0]),
 		Operands:    Operands{First: b[1], Second: b[2]},
 	}
 }
@@ -76,8 +77,8 @@ func Btop(bp BinProgram) Program {
 	return p
 }
 
-func extractAddressMode(operation Word) AddressMode {
-	addressModeBits := int(operation) >> 4
+func ExtractAddressMode(operation Word) AddressMode {
+	addressModeBits := int(operation) >> 5
 
 	addressModes := map[uint16]AddressMode{
 		0b01_00: DIRECT,
@@ -87,6 +88,7 @@ func extractAddressMode(operation Word) AddressMode {
 		0b10_01: INDIRECT_DIRECT,
 		0b01_11: DIRECT_IMMEDIATE,
 		0b10_11: INDIRECT_IMMEDIATE,
+		0b00_00: UNUSED,
 	}
 
 	mode, ok := addressModes[uint16(addressModeBits)]
@@ -97,10 +99,10 @@ func extractAddressMode(operation Word) AddressMode {
 	return mode
 }
 
-func extractOpCode(operation Word) Operation {
-	return Operation(operation % 16)
+func ExtractOpCode(operation Word) Operation {
+	return Operation(operation & 0b0000000_00_00_11111)
 }
 
 func (i Instruction) String() string {
-	return fmt.Sprintf("<(%d) [%d, %d]>", i.Operation, i.Operands.First, i.Operands.Second)
+	return fmt.Sprintf("%d<(%d) [%d, %d]>", i.AddressMode, i.Operation, i.Operands.First, i.Operands.Second)
 }

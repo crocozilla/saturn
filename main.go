@@ -1,5 +1,9 @@
 package main
 
-func main() {
+import (
+	"saturn/gui"
+)
 
+func main() {
+	gui.Run()
 }

@@ -2,6 +2,7 @@ package vm
 
 import (
 	"errors"
+	"fmt"
 	"saturn/shared"
 )
 
@@ -19,6 +20,7 @@ type VirtualMachine struct {
 	operations     map[shared.Operation]func(shared.Operands, shared.AddressMode)
 	opSizes        map[shared.Operation]uint16
 	isRunning      bool
+	programEnd     uint16
 }
 
 func New() *VirtualMachine {
@@ -68,10 +70,12 @@ func (vm *VirtualMachine) TurnOff() {
 }
 
 func (vm *VirtualMachine) InsertProgram(program []shared.Word) {
+	var i uint16
 
-	for i := uint16(0); i < uint16(len(program)); i++ {
+	for i = 0; i < uint16(len(program)); i++ {
 		vm.memory[programBase+i] = program[i]
 	}
+	vm.programEnd = i + programBase
 }
 
 func (vm *VirtualMachine) setupOperations() {
@@ -156,7 +160,11 @@ func (vm *VirtualMachine) Reset() {
 	vm.memoryAddress = 0
 	vm.stackPointer = 0
 
-	for i := range vm.memory {
+	for i := 0; i < int(programBase); i++ {
+		vm.memory[i] = 0
+	}
+
+	for i := vm.programEnd; i < uint16(len(vm.memory)); i++ {
 		vm.memory[i] = 0
 	}
 
@@ -179,7 +187,7 @@ func (vm *VirtualMachine) structureInstruction(pc uint16) shared.Instruction {
 
 func (vm *VirtualMachine) Execute(pc uint16) {
 	instr := vm.structureInstruction(pc)
-	//fmt.Println(instr.String())
+	fmt.Println(instr.String())
 
 	vm.operation = instr.Operation
 	vm.programCounter += vm.opSizes[instr.Operation]
@@ -187,7 +195,7 @@ func (vm *VirtualMachine) Execute(pc uint16) {
 	vm.operations[instr.Operation](instr.Operands, instr.AddressMode)
 }
 
-func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
+func (vm *VirtualMachine) ExecuteAll() {
 	vm.Reset()
 
 	for vm.isRunning {

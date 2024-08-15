@@ -15,56 +15,19 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var program shared.Program = shared.Program{
-	shared.Instruction{
-		AddressMode: shared.IMMEDIATE,
-		Operation:   shared.ADD,
-		Operands:    shared.Operands{First: 30, Second: 0},
-	},
-	shared.Instruction{
-		AddressMode: shared.DIRECT_IMMEDIATE,
-		Operation:   shared.COPY,
-		Operands:    shared.Operands{First: 64, Second: 5},
-	},
-	shared.Instruction{
-		AddressMode: shared.IMMEDIATE,
-		Operation:   shared.INJ,
-		Operands:    shared.Operands{First: 64, Second: 0},
-	},
-	shared.Instruction{
-		AddressMode: shared.INDIRECT,
-		Operation:   shared.DIVIDE,
-		Operands:    shared.Operands{First: 0, Second: 0},
-	},
-	shared.Instruction{
-		AddressMode: shared.DIRECT,
-		Operation:   shared.ADD,
-		Operands:    shared.Operands{First: 64, Second: 0},
-	},
-	shared.Instruction{
-		AddressMode: shared.DIRECT,
-		Operation:   shared.STORE,
-		Operands:    shared.Operands{First: 72, Second: 0},
-	},
-	shared.Instruction{
-		AddressMode: shared.INDIRECT,
-		Operation:   shared.LOAD,
-		Operands:    shared.Operands{First: 0, Second: 0},
-	},
-	shared.Instruction{
-		AddressMode: shared.IMMEDIATE,
-		Operation:   shared.STOP,
-		Operands:    shared.Operands{},
-	},
-}
-
 var machine = vm.New()
 
 var mem = container.NewGridWithColumns(4)
 var r = container.NewGridWithColumns(3)
+var program_backup []shared.Word
 
 func InsertProgram(program []shared.Word) {
+	program_backup = program
 	machine.InsertProgram(program)
+}
+
+func ReInsertProgram() {
+	machine.InsertProgram(program_backup)
 }
 
 func Run() {
@@ -124,7 +87,7 @@ func buttons() *fyne.Container {
 	})
 
 	executeAllBtn := widget.NewButton("Executar Tudo", func() {
-		machine.ExecuteAll(program)
+		machine.ExecuteAll()
 		updateGUI()
 	})
 

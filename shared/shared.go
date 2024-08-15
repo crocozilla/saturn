@@ -59,8 +59,8 @@ type BinInstruction [3]Word
 // Binary Instruction to Instruction
 func Btoi(b BinInstruction) Instruction {
 	return Instruction{
-		AddressMode: extractAddressMode(b[0]),
-		Operation:   extractOpCode(b[0]),
+		AddressMode: ExtractAddressMode(b[0]),
+		Operation:   ExtractOpCode(b[0]),
 		Operands:    Operands{First: b[1], Second: b[2]},
 	}
 }
@@ -76,8 +76,8 @@ func Btop(bp BinProgram) Program {
 	return p
 }
 
-func extractAddressMode(operation Word) AddressMode {
-	addressModeBits := int(operation) >> 4
+func ExtractAddressMode(operation Word) AddressMode {
+	addressModeBits := int(operation) >> 5
 
 	addressModes := map[uint16]AddressMode{
 		0b01_00: DIRECT,
@@ -97,8 +97,8 @@ func extractAddressMode(operation Word) AddressMode {
 	return mode
 }
 
-func extractOpCode(operation Word) Operation {
-	return Operation(operation % 16)
+func ExtractOpCode(operation Word) Operation {
+	return Operation(operation % 17)
 }
 
 func (i Instruction) String() string {

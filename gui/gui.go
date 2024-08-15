@@ -63,6 +63,10 @@ var machine = vm.New()
 var mem = container.NewGridWithColumns(4)
 var r = container.NewGridWithColumns(3)
 
+func InsertProgram(program []shared.Word) {
+	machine.InsertProgram(program)
+}
+
 func Run() {
 	a := app.New()
 
@@ -112,9 +116,9 @@ func memory() fyne.CanvasObject {
 
 func buttons() *fyne.Container {
 	executeBtn := widget.NewButton("Executar", func() {
-		if len(program) > int(machine.PC()) {
+		if machine.IsRunning() {
 
-			machine.Execute(program[machine.PC()])
+			machine.Execute(machine.PC())
 			updateGUI()
 		}
 	})

@@ -24,6 +24,7 @@ func New() *VirtualMachine {
 	vm.setupOperations()
 	vm.setupOpSizes()
 	vm.stackInit()
+	vm.isRunning = true
 	return vm
 }
 
@@ -51,6 +52,10 @@ func (vm *VirtualMachine) MemoryAddress() uint16 {
 	return vm.memoryAddress
 }
 
+func (vm *VirtualMachine) IsRunning() bool {
+	return vm.isRunning
+}
+
 // provavelmente serão removidas, só para checkpoint
 func (vm *VirtualMachine) TurnOn() {
 	vm.isRunning = true
@@ -58,6 +63,13 @@ func (vm *VirtualMachine) TurnOn() {
 
 func (vm *VirtualMachine) TurnOff() {
 	vm.isRunning = false
+}
+
+func (vm *VirtualMachine) InsertProgram(program []shared.Word) {
+
+	for i := uint16(0); i < uint16(len(program)); i++ {
+		vm.memory[vm.programCounter+i] = program[i]
+	}
 }
 
 func (vm *VirtualMachine) setupOperations() {
@@ -147,6 +159,7 @@ func (vm *VirtualMachine) Reset() {
 	}
 
 	vm.stackInit()
+	vm.isRunning = true
 	stackLimit := uint16(vm.memory[stackBase])
 	vm.programCounter = stackBase + stackLimit + 1 //primeiro endereco sem ser da pilha
 }
@@ -174,7 +187,6 @@ func (vm *VirtualMachine) Execute(pc uint16) {
 
 func (vm *VirtualMachine) ExecuteAll(program shared.Program) {
 	vm.Reset()
-	vm.isRunning = true
 
 	for vm.isRunning {
 		vm.Execute(vm.programCounter)

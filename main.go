@@ -11,9 +11,10 @@ import (
 //"saturn/gui"
 
 func main() {
-	instructions := ReadProgram("./program.txt")
-	for i := range instructions {
-		fmt.Println(instructions[i])
+	program := ReadProgram("./program.txt")
+	for i := range program {
+		fmt.Println(program[i])
 	}
+	gui.InsertProgram(program)
 	gui.Run()
 }

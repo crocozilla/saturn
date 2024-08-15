@@ -6,6 +6,8 @@ import (
 )
 
 const stackBase uint16 = 2 // 2 é definido no pdf do trabalho
+const stackLimit uint16 = 10
+const programBase uint16 = stackBase + stackLimit + 1
 
 type VirtualMachine struct {
 	memory         [128]shared.Word
@@ -68,7 +70,7 @@ func (vm *VirtualMachine) TurnOff() {
 func (vm *VirtualMachine) InsertProgram(program []shared.Word) {
 
 	for i := uint16(0); i < uint16(len(program)); i++ {
-		vm.memory[vm.programCounter+i] = program[i]
+		vm.memory[programBase+i] = program[i]
 	}
 }
 
@@ -117,13 +119,13 @@ func (vm *VirtualMachine) setupOpSizes() {
 }
 
 func (vm *VirtualMachine) stackInit() {
-	var stackLimit uint16 = 10                     // max elements
+	//var stackLimit uint16 = 10                     // max elements
 	vm.memory[stackBase] = shared.Word(stackLimit) // primeiro elemento da pilha é seu limite (definido no pdf)
 }
 
 func (vm *VirtualMachine) stackPush(value shared.Word) error {
 	vm.stackPointer++
-	stackLimit := uint16(vm.memory[stackBase])
+	//	stackLimit := uint16(vm.memory[stackBase])
 
 	if vm.stackPointer > stackLimit {
 		vm.stackPointer = 0
@@ -160,17 +162,16 @@ func (vm *VirtualMachine) Reset() {
 
 	vm.stackInit()
 	vm.isRunning = true
-	stackLimit := uint16(vm.memory[stackBase])
-	vm.programCounter = stackBase + stackLimit + 1 //primeiro endereco sem ser da pilha
 }
 
 func (vm *VirtualMachine) structureInstruction(pc uint16) shared.Instruction {
-	operation_info := vm.memory[pc]
+	address := pc + programBase
+	operation_info := vm.memory[address]
 
 	instr := shared.Instruction{
 		AddressMode: shared.ExtractAddressMode(operation_info),
 		Operation:   shared.ExtractOpCode(operation_info),
-		Operands:    shared.Operands{First: vm.memory[pc+1], Second: vm.memory[pc+2]}, // might be trash, but when it is, it won`t be used by the instruction
+		Operands:    shared.Operands{First: vm.memory[address+1], Second: vm.memory[address+2]}, // might be trash, but when it is, it won`t be used by the instruction
 	}
 
 	return instr

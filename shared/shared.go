@@ -104,5 +104,5 @@ func ExtractOpCode(operation Word) Operation {
 }
 
 func (i Instruction) String() string {
-	return fmt.Sprintf("<(%d) [%d, %d]>", i.Operation, i.Operands.First, i.Operands.Second)
+	return fmt.Sprintf("%d<(%d) [%d, %d]>", i.AddressMode, i.Operation, i.Operands.First, i.Operands.Second)
 }

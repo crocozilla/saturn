@@ -2,7 +2,6 @@ package vm
 
 import (
 	"errors"
-	"fmt"
 	"saturn/shared"
 )
 
@@ -180,7 +179,7 @@ func (vm *VirtualMachine) structureInstruction(pc uint16) shared.Instruction {
 
 func (vm *VirtualMachine) Execute(pc uint16) {
 	instr := vm.structureInstruction(pc)
-	fmt.Println(instr.String())
+	//fmt.Println(instr.String())
 
 	vm.operation = instr.Operation
 	vm.programCounter += vm.opSizes[instr.Operation]

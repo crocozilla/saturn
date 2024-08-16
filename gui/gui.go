@@ -19,22 +19,23 @@ var machine = vm.New()
 
 var mem = container.NewGridWithColumns(4)
 var r = container.NewGridWithColumns(3)
-var program_backup []shared.Word
+var output = widget.NewLabel(strconv.Itoa((int(machine.Output()))))
+var programBackup []shared.Word
 
 func InsertProgram(program []shared.Word) {
-	program_backup = program
+	programBackup = program
 	machine.InsertProgram(program)
 }
 
 func ReInsertProgram() {
-	machine.InsertProgram(program_backup)
+	machine.InsertProgram(programBackup)
 }
 
 func Run() {
 	a := app.New()
 
 	left := container.NewVBox(buttons())
-	middle := container.NewVBox(r)
+	middle := container.NewVBox(registers(), io(), buttons())
 	right := container.NewVBox(memory())
 
 	root := container.NewHBox(left, layout.NewSpacer(), middle, layout.NewSpacer(), right)
@@ -48,7 +49,13 @@ func Run() {
 	w.ShowAndRun()
 }
 
+func registers() fyne.Widget {
+	return widget.NewCard("Registradores", "", r)
+}
+
 func updateGUI() {
+	output.SetText(strconv.Itoa((int(machine.Output()))))
+
 	r.RemoveAll()
 	r.Add(widget.NewLabel(fmt.Sprintf("Program Counter: %d", machine.PC())))
 	r.Add(widget.NewLabel(fmt.Sprintf("Stack Pointer: %d", machine.SP())))
@@ -66,7 +73,7 @@ func updateGUI() {
 	}
 }
 
-func memory() fyne.CanvasObject {
+func memory() fyne.Widget {
 	scrollable := container.NewVScroll(mem)
 	scrollable.SetMinSize(fyne.NewSize(300, 700))
 
@@ -74,14 +81,13 @@ func memory() fyne.CanvasObject {
 	background := canvas.NewRectangle(backgroundColor)
 
 	withBackground := container.NewStack(background, scrollable)
-	return withBackground
+	return widget.NewCard("Memória", "", withBackground)
 }
 
 func buttons() *fyne.Container {
 	executeBtn := widget.NewButton("Executar", func() {
 		if machine.IsRunning() {
-
-			machine.Execute(machine.PC())
+			machine.Execute()
 			updateGUI()
 		}
 	})
@@ -96,5 +102,22 @@ func buttons() *fyne.Container {
 		updateGUI()
 	})
 
-	return container.New(layout.NewGridLayout(3), executeBtn, executeAllBtn, resetBtn)
+	return container.NewVBox(executeBtn, container.NewHBox(executeAllBtn, resetBtn))
+}
+
+func io() *fyne.Container {
+	inputEntry := widget.NewEntry()
+	inputEntry.SetPlaceHolder("Digite a entrada")
+	inputBtn := widget.NewButton("Salvar", func() {
+		data, err := strconv.Atoi(inputEntry.Text)
+		if err != nil {
+			panic(err)
+		}
+		machine.SetInput(uint16(data))
+	})
+
+	input := widget.NewCard("Entrada", "", container.NewGridWithColumns(2, inputEntry, inputBtn))
+	output := widget.NewCard("Saída", "", container.NewStack(canvas.NewRectangle(color.Black), output))
+
+	return container.NewVBox(input, output)
 }

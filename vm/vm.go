@@ -63,13 +63,12 @@ func (vm *VirtualMachine) IsRunning() bool {
 	return vm.isRunning
 }
 
-// provavelmente serão removidas, só para checkpoint
-func (vm *VirtualMachine) TurnOn() {
-	vm.isRunning = true
+func (vm *VirtualMachine) Output() uint16 {
+	return uint16(vm.io.output)
 }
 
-func (vm *VirtualMachine) TurnOff() {
-	vm.isRunning = false
+func (vm *VirtualMachine) SetInput(data uint16) {
+	vm.io.input = shared.Word(data)
 }
 
 func (vm *VirtualMachine) InsertProgram(program []shared.Word) {
@@ -359,7 +358,14 @@ func (vm *VirtualMachine) mult(operands shared.Operands, mode shared.AddressMode
 }
 
 func (vm *VirtualMachine) read(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+	switch mode {
+	case shared.DIRECT:
+		vm.memory[operands.First] = vm.io.input
+	case shared.DIRECT_INDIRECT:
+		vm.memory[vm.memoryAddress] = vm.io.input
+	default:
+		panic("incorrect address mode on READ operation")
+	}
 }
 
 func (vm *VirtualMachine) ret(operands shared.Operands, mode shared.AddressMode) {
@@ -405,7 +411,16 @@ func (vm *VirtualMachine) sub(operands shared.Operands, mode shared.AddressMode)
 }
 
 func (vm *VirtualMachine) write(operands shared.Operands, mode shared.AddressMode) {
-	panic("not implemented")
+	switch mode {
+	case shared.IMMEDIATE:
+		vm.io.output = operands.First
+	case shared.DIRECT:
+		vm.io.output = vm.memory[operands.First]
+	case shared.INDIRECT:
+		vm.io.output = vm.memory[vm.memoryAddress]
+	default:
+		panic("incorrect address mode on WRITE operation")
+	}
 }
 
 func (vm *VirtualMachine) inj(operands shared.Operands, mode shared.AddressMode) {

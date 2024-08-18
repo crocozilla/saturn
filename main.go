@@ -12,9 +12,6 @@ import (
 
 func main() {
 	program := ReadProgram("./program.txt")
-	for i := range program {
-		fmt.Println(program[i])
-	}
 	gui.InsertProgram(program)
 	gui.Run()
 }

@@ -3,18 +3,38 @@ package assembler
 import (
 	"errors"
 	"saturn/shared"
+	"bufio"
+	"os"
 )
 
 var sourceCodePath string
 
-func Run(filePath string) (program shared.Program) {
-	sourceCodePath = filePath
+type Assembler struct{
+	symbolTable map[string]shared.Word // dont know if should be shared.Word
+	locationCounter int
+	end bool
+}
 
-	scanLines(sourceCodePath, firstStep)
-	scanLines(sourceCodePath, secondStep)
+func New() *Assembler{
+	assembler := new(Assembler)
+	return assembler
+}
+
+// writes to file program.txt as its output
+func Run(filePath string) {
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	assembler := New()
+
+	assembler.firstStep(file)
+	assembler.secondStep(file)
 
 	// to-do: assemble program
-	return shared.Program{}
 }
 
 func Check(token string) (shared.Operation, error) {
@@ -44,10 +64,53 @@ func Check(token string) (shared.Operation, error) {
 	}
 }
 
-func firstStep(line string) {
-	// to-do
+func (assembler *Assembler) firstStep(file *os.File) {
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan(){
+		line := scanner.Text()
+		if (len(line) > 80){
+			panic("linha muito longa. Não deve haver mais de 80 caracteres numa linha.")
+		}
+
+		// whole line is a comment
+		if(line[0] == '*'){
+			continue
+		}
+
+		//label, operation, op1, op2 := parseLine(line)
+/*
+		// pseudoInstructions is a map defined in pseudo_instruction.go
+		if(_, ok := pseudoInstructions[operation]; ok){
+			treatPseudoInstruction(operation)
+			if(assembler.end == true){
+				return
+			}
+		}
+
+		if len(label) == 0{
+			// add to symbol table
+			 
+		}
+*/
+	}
+
 }
 
-func secondStep(line string) {
+func (assembler *Assembler) secondStep(file *os.File) {
 	// to-do
+	panic("secondStep not implemented")
+}
+
+func treatPseudoInstruction(assembler Assembler, pseudoInstruction string){
+	switch (pseudoInstruction){
+	case "START":
+	case "END":
+		assembler.end = true
+	case "INTDEF":
+	case "INTUSE":
+	case "CONST":
+	case "SPACE":
+	case "STACK":
+	}
 }

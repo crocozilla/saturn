@@ -60,11 +60,8 @@ func beginsComment(line string) bool{
 	return line[0] == '*';
 }
 
-// assumes no comments, if no something optional is missing, returns empty string instead
+// assumes line is not a comment, if something optional is missing, returns empty string instead
 func parseLine(line string) (label string, operation string, op1 string, op2 string){
-	if beginsComment(line){
-		return "", "", "", ""
-	}
 	label = getWord(line)
 
 	line = skipUntilNextWord(line)

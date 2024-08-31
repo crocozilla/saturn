@@ -88,7 +88,7 @@ func (assembler *Assembler) firstStep(file *os.File) {
 			}
 		}
 
-		if len(label) == 0{
+		if len(label) != 0{
 			// add to symbol table
 			 
 		}

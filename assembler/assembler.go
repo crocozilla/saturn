@@ -1,21 +1,20 @@
 package assembler
 
 import (
-	"errors"
-	"saturn/shared"
 	"bufio"
+	"errors"
 	"os"
+	"saturn/shared"
 )
 
 var sourceCodePath string
 
-type Assembler struct{
-	symbolTable map[string]shared.Word // dont know if should be shared.Word
-	locationCounter int
-	end bool
+type Assembler struct {
+	symbolTable     map[string]uint16
+	locationCounter uint16
 }
 
-func New() *Assembler{
+func New() *Assembler {
 	assembler := new(Assembler)
 	return assembler
 }
@@ -37,7 +36,7 @@ func Run(filePath string) {
 	// to-do: assemble program
 }
 
-func Check(token string) (shared.Operation, error) {
+func getOpcode(token string) (shared.Operation, error) {
 	allowedInstructions := map[string]shared.Operation{
 		"ADD":    2,
 		"BR":     0,
@@ -67,33 +66,40 @@ func Check(token string) (shared.Operation, error) {
 func (assembler *Assembler) firstStep(file *os.File) {
 	scanner := bufio.NewScanner(file)
 
-	for scanner.Scan(){
+	for scanner.Scan() {
 		line := scanner.Text()
-		if (len(line) > 80){
+		if len(line) > 80 {
 			panic("linha muito longa. Não deve haver mais de 80 caracteres numa linha.")
 		}
 
 		// whole line is a comment
-		if(line[0] == '*'){
+		if line[0] == '*' {
 			continue
 		}
 
-		//label, operation, op1, op2 := parseLine(line)
-/*
-		// pseudoInstructions is a map defined in pseudo_instruction.go
-		if(_, ok := pseudoInstructions[operation]; ok){
-			treatPseudoInstruction(operation)
-			if(assembler.end == true){
-				return
+		// if operation is a pseudo-instruction, op2 is always empty
+		label, operationString, op1, op2 := parseLine(line)
+
+		_, isPseudoInstruction := pseudoOpSizes[operationString]
+		if isPseudoInstruction {
+			treatPseudoInstruction(operationString, op1)
+
+		} else {
+			operation, err := getOpcode(operationString)
+			if err != nil {
+				panic("invalid operation")
 			}
+
+			if len(label) != 0 {
+				assembler.insertIntoSymbolTable(label)
+			}
+
+			assembler.locationCounter += shared.OpSizes[operation]
 		}
 
-		if len(label) != 0{
-			// add to symbol table
-			 
-		}
-*/
 	}
+
+	panic("no end instruction.")
 
 }
 
@@ -102,15 +108,9 @@ func (assembler *Assembler) secondStep(file *os.File) {
 	panic("secondStep not implemented")
 }
 
-func treatPseudoInstruction(assembler Assembler, pseudoInstruction string){
-	switch (pseudoInstruction){
-	case "START":
-	case "END":
-		assembler.end = true
-	case "INTDEF":
-	case "INTUSE":
-	case "CONST":
-	case "SPACE":
-	case "STACK":
-	}
+func (assembler *Assembler) insertIntoSymbolTable(label string) {
+	assembler.symbolTable[label] = assembler.locationCounter
 }
+
+// converts operand from string to its value
+//func getOperandValue(operand string)  {}

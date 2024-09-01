@@ -17,7 +17,6 @@ type VirtualMachine struct {
 	operation      shared.Operation
 	memoryAddress  uint16
 	opImpls        map[shared.Operation]func(shared.Operands, shared.AddressMode)
-	opSizes        map[shared.Operation]uint16
 	isRunning      bool
 	programEnd     uint16
 	io             struct {
@@ -29,7 +28,6 @@ type VirtualMachine struct {
 func New() *VirtualMachine {
 	vm := new(VirtualMachine)
 	vm.setupOperations()
-	vm.setupOpSizes()
 	vm.stackInit()
 	vm.isRunning = true
 	return vm
@@ -109,28 +107,6 @@ func (vm *VirtualMachine) setupOperations() {
 	}
 }
 
-func (vm *VirtualMachine) setupOpSizes() {
-	vm.opSizes = map[shared.Operation]uint16{
-		shared.ADD:    2,
-		shared.BR:     2,
-		shared.BRNEG:  2,
-		shared.BRPOS:  2,
-		shared.BRZERO: 2,
-		shared.CALL:   2,
-		shared.COPY:   3,
-		shared.DIVIDE: 2,
-		shared.LOAD:   2,
-		shared.MULT:   2,
-		shared.READ:   2,
-		shared.RET:    1,
-		shared.STOP:   1,
-		shared.STORE:  2,
-		shared.SUB:    2,
-		shared.WRITE:  2,
-		shared.INJ:    2,
-	}
-}
-
 func (vm *VirtualMachine) stackInit() {
 	vm.memory[stackBase] = shared.Word(stackLimit) // primeiro elemento da pilha é seu limite (definido no pdf)
 }
@@ -199,7 +175,7 @@ func (vm *VirtualMachine) Execute() {
 	instr := vm.decodeInst()
 
 	vm.operation = instr.Operation
-	vm.programCounter += vm.opSizes[instr.Operation]
+	vm.programCounter += shared.OpSizes[instr.Operation]
 
 	vm.opImpls[instr.Operation](instr.Operands, instr.AddressMode)
 }

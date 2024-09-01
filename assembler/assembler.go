@@ -38,22 +38,22 @@ func Run(filePath string) {
 
 func getOpcode(token string) (shared.Operation, error) {
 	allowedInstructions := map[string]shared.Operation{
-		"ADD":    2,
-		"BR":     0,
-		"BRNEG":  5,
-		"BRPOS":  1,
-		"BRZERO": 4,
-		"CALL":   15,
-		"COPY":   13,
-		"DIVIDE": 10,
-		"LOAD":   3,
-		"MULT":   14,
-		"READ":   12,
-		"RET":    16,
-		"STOP":   11,
-		"STORE":  7,
-		"SUB":    6,
-		"WRITE":  8,
+		"ADD":    shared.ADD,
+		"BR":     shared.BR,
+		"BRNEG":  shared.BRNEG,
+		"BRPOS":  shared.BRPOS,
+		"BRZERO": shared.BRZERO,
+		"CALL":   shared.CALL,
+		"COPY":   shared.COPY,
+		"DIVIDE": shared.DIVIDE,
+		"LOAD":   shared.LOAD,
+		"MULT":   shared.MULT,
+		"READ":   shared.READ,
+		"RET":    shared.RET,
+		"STOP":   shared.STOP,
+		"STORE":  shared.STORE,
+		"SUB":    shared.SUB,
+		"WRITE":  shared.WRITE,
 	}
 
 	if opCode, ok := allowedInstructions[token]; ok {

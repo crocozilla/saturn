@@ -1,5 +1,6 @@
 package assembler
 
+// numbers arent set properly yet
 var pseudoOpSizes map[string]uint16 = map[string]uint16{
 	"START":  1,
 	"END":    1,

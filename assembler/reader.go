@@ -28,9 +28,9 @@ func scanLines(assembler Assembler, path string, callback func(assembler Assembl
 */
 
 // starting at a non-space character, returns string up until a space
-func getWord(line string) string{
-	for i, v := range line{
-		if unicode.IsSpace(v){
+func getWord(line string) string {
+	for i, v := range line {
+		if unicode.IsSpace(v) {
 			return line[:i]
 		}
 	}
@@ -40,12 +40,12 @@ func getWord(line string) string{
 }
 
 // returns empty string if no words left
-func skipUntilNextWord(line string) string{
+func skipUntilNextWord(line string) string {
 	// skips current word
 	line = line[len(getWord(line)):]
 
-	for i, v := range line{
-		if !unicode.IsSpace(v){
+	for i, v := range line {
+		if !unicode.IsSpace(v) {
 			return line[i:]
 		}
 	}
@@ -53,31 +53,36 @@ func skipUntilNextWord(line string) string{
 	return ""
 }
 
-func beginsComment(line string) bool{
-	if len(line) == 0{
+func beginsComment(line string) bool {
+	if len(line) == 0 {
 		return false
 	}
-	return line[0] == '*';
+	return line[0] == '*'
 }
 
 // assumes line is not a comment, if something optional is missing, returns empty string instead
-func parseLine(line string) (label string, operation string, op1 string, op2 string){
+func parseLine(line string) (label string, operation string, op1 string, op2 string) {
 	label = getWord(line)
 
 	line = skipUntilNextWord(line)
 	operation = getWord(line)
 
 	line = skipUntilNextWord(line)
-	if beginsComment(line){
+	if beginsComment(line) {
 		return label, operation, "", ""
 	}
 	op1 = getWord(line)
 
 	line = skipUntilNextWord(line)
-	if beginsComment(line){
+	if beginsComment(line) {
 		return label, operation, op1, ""
 	}
 	op2 = getWord(line)
+
+	line = skipUntilNextWord(line)
+	if len(line) != 0 && !beginsComment(line) {
+		panic("alguma linha tem colunas demais")
+	}
 
 	return label, operation, op1, op2
 }

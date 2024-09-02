@@ -1,3 +1,4 @@
-label1 ADD op1 op2 *comment
+test  START *begins program
+label1 ADD op1 op2    *comment
       ADD op1 *comment
 blank STOP  

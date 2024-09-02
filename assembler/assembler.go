@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"saturn/shared"
+	"unicode"
 )
 
 var sourceCodePath string
@@ -80,6 +81,20 @@ func (assembler *Assembler) firstStep(file *os.File) {
 		// if operation is a pseudo-instruction, op2 is always empty
 		label, operationString, op1, op2 := parseLine(line)
 
+		if len(label) > 8 {
+			panic("um símbolo excede o limite de caracteres (8).")
+		}
+
+		for i, v := range label {
+			if i == 0 {
+				if !unicode.IsLetter(v) {
+					panic("primeiro caracter de um símbolo deve ser alfabético")
+				}
+			} else if !(unicode.IsLetter(v) || unicode.IsDigit(v)) {
+				panic("símbolo deve apenas conter caracteres alfanuméricos")
+			}
+		}
+
 		_, isPseudoInstruction := pseudoOpSizes[operationString]
 		if isPseudoInstruction {
 			treatPseudoInstruction(operationString, op1)
@@ -87,7 +102,7 @@ func (assembler *Assembler) firstStep(file *os.File) {
 		} else {
 			operation, err := getOpcode(operationString)
 			if err != nil {
-				panic("invalid operation")
+				panic("operação inválida.")
 			}
 
 			if len(label) != 0 {
@@ -99,7 +114,7 @@ func (assembler *Assembler) firstStep(file *os.File) {
 
 	}
 
-	panic("no end instruction.")
+	panic("sem instrução \"end\"")
 
 }
 
@@ -113,4 +128,6 @@ func (assembler *Assembler) insertIntoSymbolTable(label string) {
 }
 
 // converts operand from string to its value
-//func getOperandValue(operand string)  {}
+func getOperandValue(operand string) {
+	panic("getOperandValue not implemented")
+}

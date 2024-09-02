@@ -4,6 +4,8 @@ import "fmt"
 
 type Word int16
 
+const WordSize = 16
+
 type Program []Instruction
 
 type BinProgram []BinInstruction

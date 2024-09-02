@@ -5,13 +5,14 @@ import (
 	"errors"
 	"os"
 	"saturn/shared"
+	"strconv"
 	"unicode"
 )
 
 var sourceCodePath string
 
 type Assembler struct {
-	symbolTable     map[string]uint16
+	symbolTable     map[string]shared.Word
 	locationCounter uint16
 }
 
@@ -100,6 +101,11 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			case "INTDEF":
 			case "INTUSE":
 			case "CONST":
+				value, err := getOperandValue(op1)
+				if err != nil {
+					panic(err)
+				}
+				assembler.symbolTable[label] = value
 			case "SPACE":
 			case "STACK":
 			}
@@ -111,7 +117,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			}
 
 			if len(label) != 0 {
-				assembler.insertIntoSymbolTable(label)
+				assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
 			}
 
 			assembler.locationCounter += shared.OpSizes[operation]
@@ -132,17 +138,59 @@ func (assembler *Assembler) secondPass(file *os.File) {
 			continue
 		}
 
-		// if operation is a pseudo-instruction, op2 is always empty
 		//_, operationString, op1, op2 := parseLine(line)
 
 	}
 }
 
-func (assembler *Assembler) insertIntoSymbolTable(label string) {
-	assembler.symbolTable[label] = assembler.locationCounter
+func getOperandValue(operand string) (shared.Word, error) {
+	if len(operand) == 0 {
+		return shared.Word(0), errors.New("operando vazio usado em getOperandValue")
+	}
+
+	var value int64
+	var err error
+	operand, err = RemoveAdressFromOperand(operand)
+	if err != nil {
+		return shared.Word(0), err
+	}
+	apostrophe := byte('\'')
+	isHexadecimal := operand[0] == 'H' && len(operand) > 3
+	isLiteral := operand[0] == '@' && len(operand) > 1
+	switch {
+	case isHexadecimal:
+		if operand[1] != apostrophe && operand[len(operand)-1] != apostrophe {
+			return 0, errors.New("faltando apostrofos em número hexadecimal")
+		}
+		hexString := operand[1 : len(operand)-1]
+		value, err = strconv.ParseInt(hexString, 16, shared.WordSize)
+		if err != nil {
+			return 0, errors.New("número hexadecimal inválido")
+		}
+
+	case isLiteral:
+		value, err = strconv.ParseInt(operand[1:], 10, shared.WordSize)
+		if err != nil {
+			return 0, errors.New("literal decimal inválido")
+		}
+	default:
+		value, err = strconv.ParseInt(operand, 10, shared.WordSize)
+		if err != nil {
+			return 0, errors.New("número não reconhecido")
+		}
+	}
+
+	return shared.Word(value), nil
 }
 
-// converts operand from string to its value
-func getOperandValue(operand string) {
-	panic("getOperandValue not implemented")
+func RemoveAdressFromOperand(operand string) (string, error) {
+	if operand[0] == '#' && len(operand) > 1 {
+		operand = operand[1:]
+	} else if len(operand) > 2 && operand[len(operand)-2] == ',' && operand[len(operand)-1] == 'I' {
+		operand = operand[0 : len(operand)-2]
+	} else if _, err := strconv.Atoi(operand); err != nil {
+		return "", errors.New("operando inválido")
+	}
+
+	return operand, nil
 }

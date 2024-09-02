@@ -1,6 +1,7 @@
 package assembler
 
 import (
+	"bufio"
 	"unicode"
 )
 
@@ -85,4 +86,18 @@ func parseLine(line string) (label string, operation string, op1 string, op2 str
 	}
 
 	return label, operation, op1, op2
+}
+
+func readLine(scanner *bufio.Scanner) (line string, isComment bool) {
+	line = scanner.Text()
+	if len(line) > 80 {
+		panic("linha muito longa. Não deve haver mais de 80 caracteres numa linha.")
+	}
+
+	// whole line is a comment
+	if line[0] == '*' {
+		return "", true
+	}
+
+	return line, false
 }

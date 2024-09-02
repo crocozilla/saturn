@@ -11,6 +11,7 @@ var pseudoOpSizes map[string]uint16 = map[string]uint16{
 	"STACK":  1,
 }
 
+/*
 func treatPseudoInstruction(instruction string, operand string) {
 	switch instruction {
 	case "START":
@@ -22,4 +23,4 @@ func treatPseudoInstruction(instruction string, operand string) {
 	case "SPACE":
 	case "STACK":
 	}
-}
+}*/

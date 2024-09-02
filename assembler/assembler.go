@@ -31,8 +31,8 @@ func Run(filePath string) {
 
 	assembler := New()
 
-	assembler.firstStep(file)
-	assembler.secondStep(file)
+	assembler.firstPass(file)
+	assembler.secondPass(file)
 
 	// to-do: assemble program
 }
@@ -64,17 +64,12 @@ func getOpcode(token string) (shared.Operation, error) {
 	}
 }
 
-func (assembler *Assembler) firstStep(file *os.File) {
+func (assembler *Assembler) firstPass(file *os.File) {
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
-		line := scanner.Text()
-		if len(line) > 80 {
-			panic("linha muito longa. Não deve haver mais de 80 caracteres numa linha.")
-		}
-
-		// whole line is a comment
-		if line[0] == '*' {
+		line, isComment := readLine(scanner)
+		if isComment {
 			continue
 		}
 
@@ -97,7 +92,17 @@ func (assembler *Assembler) firstStep(file *os.File) {
 
 		_, isPseudoInstruction := pseudoOpSizes[operationString]
 		if isPseudoInstruction {
-			treatPseudoInstruction(operationString, op1)
+			instruction := operationString
+			switch instruction {
+			case "START":
+			case "END":
+				return
+			case "INTDEF":
+			case "INTUSE":
+			case "CONST":
+			case "SPACE":
+			case "STACK":
+			}
 
 		} else {
 			operation, err := getOpcode(operationString)
@@ -118,9 +123,19 @@ func (assembler *Assembler) firstStep(file *os.File) {
 
 }
 
-func (assembler *Assembler) secondStep(file *os.File) {
-	// to-do
-	panic("secondStep not implemented")
+func (assembler *Assembler) secondPass(file *os.File) {
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line, isComment := readLine(scanner)
+		if isComment {
+			continue
+		}
+
+		// if operation is a pseudo-instruction, op2 is always empty
+		//_, operationString, op1, op2 := parseLine(line)
+
+	}
 }
 
 func (assembler *Assembler) insertIntoSymbolTable(label string) {

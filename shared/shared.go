@@ -4,6 +4,8 @@ import "fmt"
 
 type Word int16
 
+const WordSize = 16
+
 type Program []Instruction
 
 type BinProgram []BinInstruction
@@ -53,6 +55,26 @@ const (
 	WRITE  Operation = 8
 	INJ    Operation = 9
 )
+
+var OpSizes map[Operation]uint16 = map[Operation]uint16{
+	ADD:    2,
+	BR:     2,
+	BRNEG:  2,
+	BRPOS:  2,
+	BRZERO: 2,
+	CALL:   2,
+	COPY:   3,
+	DIVIDE: 2,
+	LOAD:   2,
+	MULT:   2,
+	READ:   2,
+	RET:    1,
+	STOP:   1,
+	STORE:  2,
+	SUB:    2,
+	WRITE:  2,
+	INJ:    2,
+}
 
 // TESTAR TUDO
 type BinInstruction [3]Word

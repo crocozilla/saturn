@@ -14,6 +14,7 @@ var sourceCodePath string
 type Assembler struct {
 	symbolTable     map[string]shared.Word
 	locationCounter uint16
+	programName     string
 }
 
 func New() *Assembler {
@@ -74,7 +75,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			continue
 		}
 
-		// if operation is a pseudo-instruction, op2 is always empty
+		// if operation is a pseudo-instruction, op2 is always EMPTY
 		label, operationString, op1, op2 := parseLine(line)
 
 		if len(label) > 8 {
@@ -91,41 +92,76 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			}
 		}
 
-		_, isPseudoInstruction := pseudoOpSizes[operationString]
+		pseudoOpSize, isPseudoInstruction := pseudoOpSizes[operationString]
 		if isPseudoInstruction {
 			instruction := operationString
 			switch instruction {
 			case "START":
+				if op1 == EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução start.")
+				}
+				assembler.programName = op1
 			case "END":
+				if op1 != EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução end.")
+				}
 				return
 			case "INTDEF":
+				if op1 == EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução intdef.")
+				}
 			case "INTUSE":
+				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução intuse.")
+				}
 			case "CONST":
+				if label == EMPTY || op1 == EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução const.")
+				}
 				value, err := getOperandValue(op1)
 				if err != nil {
 					panic(err)
 				}
 				assembler.symbolTable[label] = value
 			case "SPACE":
+				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução space.")
+				}
 			case "STACK":
+				if op1 == EMPTY || op2 != EMPTY { // não sei se label pode ser oq quiser, código está assumindo q sim
+					panic("sintaxe inválida na pseudo instrução stack.")
+				}
+			}
+			assembler.locationCounter += pseudoOpSize
+		} else {
+			opcode, err := getOpcode(operationString)
+			if err != nil {
+				panic("operação " + operationString + " é inválida.")
 			}
 
-		} else {
-			operation, err := getOpcode(operationString)
-			if err != nil {
-				panic("operação inválida.")
+			opSize, _ := shared.OpSizes[opcode]
+			sizeOneError := opSize == 1 && (op1 != EMPTY || op2 != EMPTY)
+			sizeTwoError := opSize == 2 && (op1 == EMPTY || op2 != EMPTY)
+			sizeThreeError := opSize == 3 && (op1 == EMPTY || op2 == EMPTY)
+			invalidSyntax := sizeOneError || sizeTwoError || sizeThreeError
+			if invalidSyntax {
+				panic("sintaxe inválida na operação " + operationString + ".")
 			}
 
 			if len(label) != 0 {
+				_, ok := assembler.symbolTable[label]
+				if ok {
+					panic("símbolo " + label + " com múltiplas definições.")
+				}
 				assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
 			}
 
-			assembler.locationCounter += shared.OpSizes[operation]
+			assembler.locationCounter += opSize
 		}
 
 	}
 
-	panic("sem instrução \"end\"")
+	panic("sem instrução \"end\".")
 
 }
 
@@ -189,7 +225,7 @@ func RemoveAdressFromOperand(operand string) (string, error) {
 	} else if len(operand) > 2 && operand[len(operand)-2] == ',' && operand[len(operand)-1] == 'I' {
 		operand = operand[0 : len(operand)-2]
 	} else if _, err := strconv.Atoi(operand); err != nil {
-		return "", errors.New("operando inválido")
+		return EMPTY, errors.New("operando inválido")
 	}
 
 	return operand, nil

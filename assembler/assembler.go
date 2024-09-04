@@ -100,10 +100,16 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if op1 == EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução start.")
 				}
+				if label != EMPTY {
+					assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
+				}	
 				assembler.programName = op1
 			case "END":
 				if op1 != EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução end.")
+				}
+				if label != EMPTY {
+					assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
 				}
 				return
 			case "INTDEF":
@@ -127,9 +133,13 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução space.")
 				}
+				assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
 			case "STACK":
 				if op1 == EMPTY || op2 != EMPTY { // não sei se label pode ser oq quiser, código está assumindo q sim
 					panic("sintaxe inválida na pseudo instrução stack.")
+				}
+				if label != EMPTY {
+					assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
 				}
 			}
 			assembler.locationCounter += pseudoOpSize

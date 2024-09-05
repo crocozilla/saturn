@@ -102,7 +102,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				}
 				if label != EMPTY {
 					assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
-				}	
+				}
 				assembler.programName = op1
 			case "END":
 				if op1 != EMPTY || op2 != EMPTY {
@@ -116,10 +116,14 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if op1 == EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução intdef.")
 				}
+				if label != EMPTY {
+					assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
+				}
 			case "INTUSE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução intuse.")
 				}
+				// pensar no que fazer com label nesse caso
 			case "CONST":
 				if label == EMPTY || op1 == EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução const.")

@@ -47,7 +47,6 @@ func TestGetOperandValue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("número mínimo negativo gerou erro incorretamente")
 	}
-
 	_, err = getOperandValue("-")
 	if err == nil {
 		t.Fatalf("número negativo vazio não gerou erro")

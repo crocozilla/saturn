@@ -76,3 +76,50 @@ func TestGetOperandValue(t *testing.T) {
 		t.Fatalf("número negativo vazio não gerou erro")
 	}
 }
+
+func TestGetAddressMode(t *testing.T) {
+	addressMode, err := getAddressMode("64")
+	if err != nil {
+		panic(err)
+	}
+	if addressMode != shared.DIRECT {
+		t.Fatalf("addressMode deveria ser direto")
+	}
+	addressMode, err = getAddressMode("64,I")
+	if err != nil {
+		panic(err)
+	}
+	if addressMode != shared.INDIRECT {
+		t.Fatalf("addressMode deveria ser indireto")
+	}
+	addressMode, err = getAddressMode("#64")
+	if err != nil {
+		panic(err)
+	}
+	if addressMode != shared.IMMEDIATE {
+		t.Fatalf("addressMode deveria ser imediato")
+	}
+	_, err = getAddressMode("#64I")
+	if err == nil {
+		t.Fatalf("addressMode múltiplo foi permitido")
+	}
+	_, err = getAddressMode("64I")
+	if err == nil {
+		t.Fatalf("modo indireto incorreto foi permitido")
+	}
+}
+
+func TestRemoveAddressMode(t *testing.T) {
+	operand, _ := removeAddressMode("64,I")
+	if operand != "64" {
+		t.Fatalf("esperava-se operando 64, recebeu-se %v", operand)
+	}
+	operand, _ = removeAddressMode("#65")
+	if operand != "65" {
+		t.Fatalf("esperava-se operando 65, recebeu-se %v", operand)
+	}
+	operand, _ = removeAddressMode("#@H'3F'")
+	if operand != "@H'3F'" {
+		t.Fatalf("esperava-se operando @H'3F, recebeu-se %v", operand)
+	}
+}

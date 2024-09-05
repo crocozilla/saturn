@@ -199,7 +199,7 @@ func getOperandValue(operand string) (shared.Word, error) {
 
 	var value int64
 	var err error
-	operand, err = RemoveAdressFromOperand(operand)
+	operand, err = removeAddressMode(operand)
 	if err != nil {
 		return shared.Word(0), err
 	}
@@ -232,12 +232,36 @@ func getOperandValue(operand string) (shared.Word, error) {
 	return shared.Word(value), nil
 }
 
-func RemoveAdressFromOperand(operand string) (string, error) {
-	if operand[0] == '#' && len(operand) > 1 {
+func removeAddressMode(operand string) (string, error) {
+	addressMode, err := getAddressMode(operand)
+	if err != nil {
+		return EMPTY, err
+	}
+	if addressMode == shared.IMMEDIATE {
 		operand = operand[1:]
-	} else if len(operand) > 2 && operand[len(operand)-2] == ',' && operand[len(operand)-1] == 'I' {
+	} else if addressMode == shared.INDIRECT {
 		operand = operand[0 : len(operand)-2]
 	}
 
 	return operand, nil
+}
+
+func getAddressMode(operand string) (shared.AddressMode, error) {
+	if operand == EMPTY {
+		return shared.DIRECT, errors.New("operando vazio em getAddressMode")
+	}
+	if operand[0] == '#' && len(operand) > 1 && operand[len(operand)-1] == 'I' {
+		return shared.DIRECT, errors.New("operando com múltiplos endereçamentos em getAddressMode")
+	}
+	// 									 note the "!="
+	if len(operand) > 2 && operand[len(operand)-2] != ',' && operand[len(operand)-1] == 'I' {
+		return shared.DIRECT, errors.New("operando indireto inválido")
+	}
+	if operand[0] == '#' && len(operand) > 1 {
+		return shared.IMMEDIATE, nil
+	} else if len(operand) > 2 && operand[len(operand)-2] == ',' && operand[len(operand)-1] == 'I' {
+		return shared.INDIRECT, nil
+	}
+
+	return shared.DIRECT, nil
 }

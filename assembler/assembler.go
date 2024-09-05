@@ -9,8 +9,6 @@ import (
 	"unicode"
 )
 
-var sourceCodePath string
-
 type Assembler struct {
 	symbolTable     map[string]shared.Word
 	locationCounter uint16
@@ -19,6 +17,7 @@ type Assembler struct {
 
 func New() *Assembler {
 	assembler := new(Assembler)
+	assembler.symbolTable = map[string]shared.Word{}
 	return assembler
 }
 
@@ -153,7 +152,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				panic("operação " + operationString + " é inválida.")
 			}
 
-			opSize, _ := shared.OpSizes[opcode]
+			opSize := shared.OpSizes[opcode]
 			sizeOneError := opSize == 1 && (op1 != EMPTY || op2 != EMPTY)
 			sizeTwoError := opSize == 2 && (op1 == EMPTY || op2 != EMPTY)
 			sizeThreeError := opSize == 3 && (op1 == EMPTY || op2 == EMPTY)

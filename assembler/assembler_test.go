@@ -2,12 +2,12 @@ package assembler
 
 import (
 	"math"
+	"os"
 	"saturn/shared"
 	"strconv"
 	"testing"
 )
 
-/*
 func TestFirstPass(t *testing.T) {
 	file, err := os.Open("first_pass_test.asm")
 	if err != nil {
@@ -18,7 +18,15 @@ func TestFirstPass(t *testing.T) {
 	assembler := New()
 
 	assembler.firstPass(file)
-}*/
+	if assembler.programName != "firstPassTest" {
+		t.Fatalf("wrong program name")
+	}
+	X := assembler.symbolTable["X"]
+	if X != 5 {
+		t.Fatalf("const produced wrong result on symbol table")
+	}
+	//if assembler.symbolTable["A"] !=
+}
 
 // missing literal tests
 func TestGetOperandValue(t *testing.T) {

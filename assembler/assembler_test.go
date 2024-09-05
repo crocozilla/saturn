@@ -22,10 +22,26 @@ func TestFirstPass(t *testing.T) {
 
 // missing literal tests
 func TestGetOperandValue(t *testing.T) {
-	var err error
-	test, _ := getOperandValue("#64")
-	if test != 64 {
+	iTest, err := getOperandValue("#64")
+	if err != nil {
+		panic(err)
+	}
+	if iTest != 64 {
 		t.Fatalf("número imediato inválido")
+	}
+	hexTest, err := getOperandValue("H'F'")
+	if err != nil {
+		panic(err)
+	}
+	if hexTest != 15 {
+		t.Fatalf("número hexadecimal inválido, esperava-se %v mas obteve-se %v", 15, hexTest)
+	}
+	hexTest, err = getOperandValue("H'32AF'")
+	if err != nil {
+		panic(err)
+	}
+	if hexTest != 12975 {
+		t.Fatalf("número hexadecimal inválido, esperava-se %v mas obteve-se %v", 12975, hexTest)
 	}
 	//test, err = getOperandValue("@30")
 	maxNumber := int(math.Pow(2.0, float64(shared.WordSize-1)) - 1.0)

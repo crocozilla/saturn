@@ -139,7 +139,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				}
 				assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
 			case "STACK":
-				if op1 == EMPTY || op2 != EMPTY { // não sei se label pode ser oq quiser, código está assumindo q sim
+				if op1 == EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução stack.")
 				}
 				if label != EMPTY {
@@ -212,7 +212,7 @@ func getOperandValue(operand string) (shared.Word, error) {
 		if operand[1] != apostrophe && operand[len(operand)-1] != apostrophe {
 			return 0, errors.New("faltando apostrofos em número hexadecimal")
 		}
-		hexString := operand[1 : len(operand)-1]
+		hexString := operand[2 : len(operand)-1]
 		value, err = strconv.ParseInt(hexString, 16, shared.WordSize)
 		if err != nil {
 			return 0, errors.New("número hexadecimal inválido")
@@ -238,8 +238,6 @@ func RemoveAdressFromOperand(operand string) (string, error) {
 		operand = operand[1:]
 	} else if len(operand) > 2 && operand[len(operand)-2] == ',' && operand[len(operand)-1] == 'I' {
 		operand = operand[0 : len(operand)-2]
-	} else if _, err := strconv.Atoi(operand); err != nil {
-		return EMPTY, errors.New("operando inválido")
 	}
 
 	return operand, nil

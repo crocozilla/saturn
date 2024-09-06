@@ -22,9 +22,15 @@ func TestFirstPass(t *testing.T) {
 
 	//symbol table:
 	label := "SIG"
-	if _, ok := assembler.symbolTable[label]; !ok {
+	info, ok := assembler.symbolTable[label]
+	if !ok {
 		t.Fatalf("missing " + label + " in symbol table")
+
 	}
+	if info.address != 0 {
+		t.Fatalf("incorrect address on label " + label)
+	}
+
 	label = "PROG"
 	if _, ok := assembler.symbolTable[label]; ok {
 		t.Fatalf(label + " should be in definition table")
@@ -32,21 +38,21 @@ func TestFirstPass(t *testing.T) {
 
 	//definition table:
 	label = "PROG"
-	if _, ok := assembler.definitionTable[label]; !ok {
+	info, ok = assembler.definitionTable[label]
+	if !ok {
 		t.Fatalf("missing " + label + " in definition table")
-		//if info.address != 0 {
-
-		//}
+	}
+	if info.address != 0 {
+		t.Fatalf("incorrect address on label " + label)
 	}
 
 	label = "UP"
-	info, ok := assembler.definitionTable[label]
+	info, ok = assembler.definitionTable[label]
 	if !ok {
 		t.Fatalf("missing " + label + " in definition table")
 
 	}
 	if info.address != 6 {
-		fmt.Println(info.address)
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -62,18 +68,106 @@ func TestFirstPass(t *testing.T) {
 
 	//use table:
 	label = "LOOP"
-	if slice, ok := assembler.useTable[label]; !ok {
+	slice, ok := assembler.useTable[label]
+	if !ok {
 		t.Fatalf("missing " + label + " in definition table")
-		if len(slice) > 1 || slice[0] != 3 {
-			t.Fatalf("incorrect slice in label " + label)
-		}
+
 	}
+	if len(slice) == 0 {
+		t.Fatalf("slice is empty on label " + label)
+	}
+	if len(slice) > 1 || slice[0] != 3 {
+		t.Fatalf("incorrect slice in label " + label)
+	}
+
 	label = "X"
-	if slice, ok := assembler.useTable[label]; !ok {
+	slice, ok = assembler.useTable[label]
+	if !ok {
 		t.Fatalf("missing " + label + " in definition table")
-		if len(slice) != 0 {
-			t.Fatalf("incorrect slice in label " + label)
-		}
+	}
+	if len(slice) != 0 {
+		t.Fatalf("incorrect slice in label " + label)
+	}
+
+	file2, err := os.Open("first_pass_test_2.asm")
+	if err != nil {
+		panic(err)
+	}
+	defer file2.Close()
+
+	assembler = New()
+
+	assembler.firstPass(file2)
+
+	// symbol table
+	label = "X"
+	info, ok = assembler.symbolTable[label]
+	if !ok {
+		t.Fatalf("missing " + label + " in symbol table")
+
+	}
+	if info.address != 14 {
+		t.Fatalf("incorrect address on label " + label)
+	}
+
+	label = "LOC"
+	info, ok = assembler.symbolTable[label]
+	if !ok {
+		t.Fatalf("missing " + label + " in symbol table")
+	}
+	if info.address != 12 {
+		t.Fatalf("incorrect address on label " + label)
+	}
+
+	// definition table
+	label = "PROG"
+	info, ok = assembler.definitionTable[label]
+	if !ok {
+		t.Fatalf("missing " + label + " in definition table")
+	}
+	if info.address != 0 {
+		t.Fatalf("incorrect address on label " + label)
+	}
+
+	label = "CAS"
+	info, ok = assembler.definitionTable[label]
+	if !ok {
+		t.Fatalf("missing " + label + " in definition table")
+	}
+	if info.address != 13 {
+		t.Fatalf("incorrect address on label " + label)
+	}
+
+	label = "BRA"
+	info, ok = assembler.definitionTable[label]
+	if !ok {
+		t.Fatalf("missing " + label + " in definition table")
+	}
+	if info.address != 7 {
+		fmt.Println(info.address)
+		t.Fatalf("incorrect address on label " + label)
+	}
+
+	label = "LOOP"
+	info, ok = assembler.definitionTable[label]
+	if !ok {
+		t.Fatalf("missing " + label + " in definition table")
+	}
+	if info.address != 0 {
+		t.Fatalf("incorrect address on label " + label)
+	}
+
+	//use table:
+	label = "UP"
+	slice, ok = assembler.useTable[label]
+	if !ok {
+		t.Fatalf("missing " + label + " in use table")
+	}
+	if len(slice) == 0 {
+		t.Fatalf("incorrect slice in label " + label)
+	}
+	if slice[0] != 3 {
+		t.Fatalf("incorrect slice in label " + label)
 	}
 }
 

@@ -95,10 +95,10 @@ func (assembler *Assembler) firstPass(file *os.File) {
 		}
 		op1SymbolErr := validateSymbol(op1)
 
-		if _, ok := assembler.definitionTable[op1]; ok {
+		if _, ok := assembler.useTable[op1]; ok {
 			assembler.useTable[op1] = append(assembler.useTable[op1], assembler.locationCounter+1)
 		}
-		if _, ok := assembler.definitionTable[op2]; ok {
+		if _, ok := assembler.useTable[op2]; ok {
 			assembler.useTable[op2] = append(assembler.useTable[op2], assembler.locationCounter+2)
 		}
 
@@ -111,7 +111,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 					panic("sintaxe inválida na pseudo instrução start.")
 				}
 				if label != EMPTY {
-					assembler.insertIntoSymbolTable(label, RELATIVE)
+					assembler.insertIntoProperTable(label)
 				}
 				if op1SymbolErr != nil {
 					panic("nome do programa inválido na pseudo instrução start.")
@@ -121,7 +121,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 					panic("sintaxe inválida na pseudo instrução end.")
 				}
 				if label != EMPTY {
-					assembler.insertIntoSymbolTable(label, RELATIVE)
+					assembler.insertIntoProperTable(label)
 				}
 				return
 			case "INTDEF":
@@ -129,7 +129,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 					panic("sintaxe inválida na pseudo instrução intdef.")
 				}
 				if label != EMPTY {
-					assembler.insertIntoSymbolTable(label, RELATIVE)
+					assembler.insertIntoProperTable(label)
 				}
 				if op1SymbolErr == nil {
 					// if a symbol is defined using intdef, it should be relocated from the symbolTable
@@ -145,23 +145,18 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if label == EMPTY || op1 == EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução const.")
 				}
-				info, ok := assembler.definitionTable[label]
-				if ok && validateSymbol(label) == nil {
-					if info.mode == ABSOLUTE {
-						assembler.definitionTable[label] = symbolInfo{assembler.locationCounter, RELATIVE}
-					}
-				}
+				assembler.insertIntoProperTable(label)
 			case "SPACE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução space.")
 				}
-				assembler.insertIntoSymbolTable(label, RELATIVE)
+				assembler.insertIntoProperTable(label)
 			case "STACK":
 				if op1 == EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução stack.")
 				}
 				if label != EMPTY {
-					assembler.insertIntoSymbolTable(label, RELATIVE)
+					assembler.insertIntoProperTable(label)
 				}
 			}
 			assembler.locationCounter += pseudoOpSize
@@ -181,7 +176,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			}
 
 			if len(label) != 0 {
-				assembler.insertIntoSymbolTable(label, RELATIVE)
+				assembler.insertIntoProperTable(label)
 			}
 
 			assembler.locationCounter += opSize
@@ -198,7 +193,6 @@ func (assembler *Assembler) secondPass(file *os.File) {
 
 	for scanner.Scan() {
 		line, isComment := readLine(scanner)
-		line = line
 		if isComment {
 			continue
 		}
@@ -303,16 +297,24 @@ func validateSymbol(symbol string) error {
 	return nil
 }
 
-// assumes symbol is not empty, checks for validity
-func (assembler *Assembler) insertIntoSymbolTable(symbol string, mode byte) {
+// checks for validity
+func (assembler *Assembler) insertIntoProperTable(symbol string) {
 	err := validateSymbol(symbol)
 	if err != nil {
 		panic(err)
 	}
 
-	_, ok := assembler.symbolTable[symbol]
+	// if its defined and it is its first use, set its address to current address
+	info, ok := assembler.definitionTable[symbol]
+	if ok && validateSymbol(symbol) == nil {
+		if info.mode == ABSOLUTE {
+			assembler.definitionTable[symbol] = symbolInfo{assembler.locationCounter, RELATIVE}
+		}
+	}
+
+	_, ok = assembler.symbolTable[symbol]
 	if ok {
 		panic("símbolo " + symbol + " com múltiplas definições.")
 	}
-	assembler.symbolTable[symbol] = symbolInfo{assembler.locationCounter, mode}
+	assembler.symbolTable[symbol] = symbolInfo{assembler.locationCounter, RELATIVE}
 }

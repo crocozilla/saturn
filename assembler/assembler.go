@@ -11,6 +11,8 @@ import (
 
 var sourceCodePath string
 
+type ObjCode []string
+
 type Assembler struct {
 	symbolTable     map[string]shared.Word
 	locationCounter uint16
@@ -23,7 +25,6 @@ func New() *Assembler {
 
 // writes to file program.txt as its output
 func Run(filePath string) {
-
 	file, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
@@ -130,15 +131,41 @@ func (assembler *Assembler) firstPass(file *os.File) {
 }
 
 func (assembler *Assembler) secondPass(file *os.File) {
-	scanner := bufio.NewScanner(file)
+	os.Create("result.obj")
 
+	// File rewind to origin and reset locationCount
+	file.Seek(0, 0)
+	assembler.locationCounter = 0
+
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line, isComment := readLine(scanner)
 		if isComment {
 			continue
 		}
+	os.Create("result.obj")
 
-		//_, operationString, op1, op2 := parseLine(line)
+	// File rewind to origin and reset locationCount
+	file.Seek(0, 0)
+	assembler.locationCounter = 0
+
+		_, operation, operand1, operand2 := parseLine(line)
+
+		opCode, err := getOpcode(operation)
+		if err != nil {
+			panic(err)
+		}
+
+		if _, ok := assembler.symbolTable[operand1]; !ok {
+			assembler.symbolTable[operand1] = shared.Word(assembler.locationCounter)
+		}
+
+		if _, ok := assembler.symbolTable[operand2]; !ok {
+			assembler.symbolTable[operand2] = shared.Word(assembler.locationCounter)
+		}
+
+		assembler.locationCounter++
+
 
 	}
 }

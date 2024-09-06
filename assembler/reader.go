@@ -5,6 +5,8 @@ import (
 	"unicode"
 )
 
+const EMPTY = ""
+
 // TODO: Trocar para ler por linha
 /*
 func scanLines(assembler Assembler, path string, callback func(assembler Assembler, line string)) {
@@ -61,7 +63,7 @@ func beginsComment(line string) bool {
 	return line[0] == '*'
 }
 
-// assumes line is not a comment, if something optional is missing, returns empty string instead
+// assumes line is not a comment, if something optional is missing, returns EMPTY string instead
 func parseLine(line string) (label string, operation string, op1 string, op2 string) {
 	label = getWord(line)
 
@@ -70,13 +72,13 @@ func parseLine(line string) (label string, operation string, op1 string, op2 str
 
 	line = skipUntilNextWord(line)
 	if beginsComment(line) {
-		return label, operation, "", ""
+		return label, operation, EMPTY, EMPTY
 	}
 	op1 = getWord(line)
 
 	line = skipUntilNextWord(line)
 	if beginsComment(line) {
-		return label, operation, op1, ""
+		return label, operation, op1, EMPTY
 	}
 	op2 = getWord(line)
 
@@ -96,7 +98,7 @@ func readLine(scanner *bufio.Scanner) (line string, isComment bool) {
 
 	// whole line is a comment
 	if line[0] == '*' {
-		return "", true
+		return EMPTY, true
 	}
 
 	return line, false

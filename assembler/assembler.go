@@ -9,15 +9,29 @@ import (
 	"unicode"
 )
 
-var sourceCodePath string
+const (
+	RELATIVE = 'R'
+	ABSOLUTE = 'A'
+)
+
+type symbolInfo struct {
+	address uint16
+	mode    byte
+}
 
 type Assembler struct {
-	symbolTable     map[string]shared.Word
+	symbolTable     map[string]symbolInfo
+	definitionTable map[string]symbolInfo
+	useTable        map[string][]uint16
 	locationCounter uint16
+	programName     string
 }
 
 func New() *Assembler {
 	assembler := new(Assembler)
+	assembler.symbolTable = map[string]symbolInfo{}
+	assembler.definitionTable = map[string]symbolInfo{}
+	assembler.useTable = map[string][]uint16{}
 	return assembler
 }
 
@@ -74,58 +88,103 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			continue
 		}
 
-		// if operation is a pseudo-instruction, op2 is always empty
+		// if operation is a pseudo-instruction, op2 is always EMPTY
 		label, operationString, op1, op2 := parseLine(line)
+		if len(label) > 0 && validateSymbol(label) != nil {
+			panic(validateSymbol(label))
+		}
+		op1SymbolErr := validateSymbol(op1)
 
-		if len(label) > 8 {
-			panic("um símbolo excede o limite de caracteres (8).")
+		if _, ok := assembler.useTable[op1]; ok {
+			assembler.useTable[op1] = append(assembler.useTable[op1], assembler.locationCounter+1)
+		}
+		if _, ok := assembler.useTable[op2]; ok {
+			assembler.useTable[op2] = append(assembler.useTable[op2], assembler.locationCounter+2)
 		}
 
-		for i, v := range label {
-			if i == 0 {
-				if !unicode.IsLetter(v) {
-					panic("primeiro caracter de um símbolo deve ser alfabético")
-				}
-			} else if !(unicode.IsLetter(v) || unicode.IsDigit(v)) {
-				panic("símbolo deve apenas conter caracteres alfanuméricos")
-			}
-		}
-
-		_, isPseudoInstruction := pseudoOpSizes[operationString]
+		pseudoOpSize, isPseudoInstruction := pseudoOpSizes[operationString]
 		if isPseudoInstruction {
 			instruction := operationString
 			switch instruction {
 			case "START":
+				if op1 == EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução start.")
+				}
+				if label != EMPTY {
+					assembler.insertIntoProperTable(label)
+				}
+				if op1SymbolErr != nil {
+					panic("nome do programa inválido na pseudo instrução start.")
+				}
 			case "END":
+				if op1 != EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução end.")
+				}
+				if label != EMPTY {
+					assembler.insertIntoProperTable(label)
+				}
 				return
 			case "INTDEF":
-			case "INTUSE":
-			case "CONST":
-				value, err := getOperandValue(op1)
-				if err != nil {
-					panic(err)
+				if op1 == EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução intdef.")
 				}
-				assembler.symbolTable[label] = value
+				if label != EMPTY {
+					assembler.insertIntoProperTable(label)
+				}
+				if op1SymbolErr == nil {
+					// if a symbol is defined using intdef, it should be relocated from the symbolTable
+					delete(assembler.symbolTable, op1)
+					assembler.definitionTable[op1] = symbolInfo{assembler.locationCounter, ABSOLUTE}
+				}
+			case "INTUSE":
+				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução intuse.")
+				}
+				assembler.useTable[label] = []uint16{}
+			case "CONST":
+				if label == EMPTY || op1 == EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução const.")
+				}
+				assembler.insertIntoProperTable(label)
 			case "SPACE":
+				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução space.")
+				}
+				assembler.insertIntoProperTable(label)
 			case "STACK":
+				if op1 == EMPTY || op2 != EMPTY {
+					panic("sintaxe inválida na pseudo instrução stack.")
+				}
+				if label != EMPTY {
+					assembler.insertIntoProperTable(label)
+				}
+			}
+			assembler.locationCounter += pseudoOpSize
+		} else {
+			opcode, err := getOpcode(operationString)
+			if err != nil {
+				panic("operação " + operationString + " é inválida.")
 			}
 
-		} else {
-			operation, err := getOpcode(operationString)
-			if err != nil {
-				panic("operação inválida.")
+			opSize := shared.OpSizes[opcode]
+			sizeOneError := opSize == 1 && (op1 != EMPTY || op2 != EMPTY)
+			sizeTwoError := opSize == 2 && (op1 == EMPTY || op2 != EMPTY)
+			sizeThreeError := opSize == 3 && (op1 == EMPTY || op2 == EMPTY)
+			invalidSyntax := sizeOneError || sizeTwoError || sizeThreeError
+			if invalidSyntax {
+				panic("sintaxe inválida na operação " + operationString + ".")
 			}
 
 			if len(label) != 0 {
-				assembler.symbolTable[label] = shared.Word(assembler.locationCounter)
+				assembler.insertIntoProperTable(label)
 			}
 
-			assembler.locationCounter += shared.OpSizes[operation]
+			assembler.locationCounter += opSize
 		}
 
 	}
 
-	panic("sem instrução \"end\"")
+	panic("sem instrução \"end\".")
 
 }
 
@@ -150,7 +209,7 @@ func getOperandValue(operand string) (shared.Word, error) {
 
 	var value int64
 	var err error
-	operand, err = RemoveAdressFromOperand(operand)
+	operand, err = removeAddressMode(operand)
 	if err != nil {
 		return shared.Word(0), err
 	}
@@ -162,7 +221,7 @@ func getOperandValue(operand string) (shared.Word, error) {
 		if operand[1] != apostrophe && operand[len(operand)-1] != apostrophe {
 			return 0, errors.New("faltando apostrofos em número hexadecimal")
 		}
-		hexString := operand[1 : len(operand)-1]
+		hexString := operand[2 : len(operand)-1]
 		value, err = strconv.ParseInt(hexString, 16, shared.WordSize)
 		if err != nil {
 			return 0, errors.New("número hexadecimal inválido")
@@ -183,14 +242,79 @@ func getOperandValue(operand string) (shared.Word, error) {
 	return shared.Word(value), nil
 }
 
-func RemoveAdressFromOperand(operand string) (string, error) {
-	if operand[0] == '#' && len(operand) > 1 {
+func removeAddressMode(operand string) (string, error) {
+	addressMode, err := getAddressMode(operand)
+	if err != nil {
+		return EMPTY, err
+	}
+	if addressMode == shared.IMMEDIATE {
 		operand = operand[1:]
-	} else if len(operand) > 2 && operand[len(operand)-2] == ',' && operand[len(operand)-1] == 'I' {
+	} else if addressMode == shared.INDIRECT {
 		operand = operand[0 : len(operand)-2]
-	} else if _, err := strconv.Atoi(operand); err != nil {
-		return "", errors.New("operando inválido")
 	}
 
 	return operand, nil
+}
+
+func getAddressMode(operand string) (shared.AddressMode, error) {
+	if operand == EMPTY {
+		return shared.DIRECT, errors.New("operando vazio em getAddressMode")
+	}
+	if operand[0] == '#' && len(operand) > 1 && operand[len(operand)-1] == 'I' {
+		return shared.DIRECT, errors.New("operando com múltiplos endereçamentos em getAddressMode")
+	}
+	// 									 note the "!="
+	if len(operand) > 2 && operand[len(operand)-2] != ',' && operand[len(operand)-1] == 'I' {
+		return shared.DIRECT, errors.New("operando indireto inválido")
+	}
+	if operand[0] == '#' && len(operand) > 1 {
+		return shared.IMMEDIATE, nil
+	} else if len(operand) > 2 && operand[len(operand)-2] == ',' && operand[len(operand)-1] == 'I' {
+		return shared.INDIRECT, nil
+	}
+
+	return shared.DIRECT, nil
+}
+
+func validateSymbol(symbol string) error {
+	if symbol == EMPTY {
+		return errors.New("símbolo vazio em validateSymbol")
+	}
+	if len(symbol) > 8 {
+		return errors.New("símbolo " + symbol + " excede o limite de caracteres (8).")
+	}
+
+	for i, v := range symbol {
+		if i == 0 {
+			if !unicode.IsLetter(v) {
+				return errors.New("primeiro caracter de um símbolo deve ser alfabético")
+			}
+		} else if !(unicode.IsLetter(v) || unicode.IsDigit(v)) {
+			return errors.New("símbolo deve apenas conter caracteres alfanuméricos")
+		}
+	}
+
+	return nil
+}
+
+// checks for validity
+func (assembler *Assembler) insertIntoProperTable(symbol string) {
+	err := validateSymbol(symbol)
+	if err != nil {
+		panic(err)
+	}
+
+	// if its defined and it is its first use, set its address to current address
+	info, ok := assembler.definitionTable[symbol]
+	if ok && validateSymbol(symbol) == nil {
+		if info.mode == ABSOLUTE {
+			assembler.definitionTable[symbol] = symbolInfo{assembler.locationCounter, RELATIVE}
+		}
+	}
+
+	_, ok = assembler.symbolTable[symbol]
+	if ok {
+		panic("símbolo " + symbol + " com múltiplas definições.")
+	}
+	assembler.symbolTable[symbol] = symbolInfo{assembler.locationCounter, RELATIVE}
 }

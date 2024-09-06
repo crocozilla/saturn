@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// only testing START and CONST
 func TestFirstPass(t *testing.T) {
 	file, err := os.Open("first_pass_test.asm")
 	if err != nil {

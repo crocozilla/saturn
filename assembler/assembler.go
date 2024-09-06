@@ -90,9 +90,10 @@ func (assembler *Assembler) firstPass(file *os.File) {
 
 		// if operation is a pseudo-instruction, op2 is always EMPTY
 		label, operationString, op1, op2 := parseLine(line)
-
+		if len(label) > 0 && validateSymbol(label) != nil {
+			panic(validateSymbol(label))
+		}
 		op1SymbolErr := validateSymbol(op1)
-		op2SymbolErr := validateSymbol(op2)
 
 		if _, ok := assembler.definitionTable[op1]; ok {
 			assembler.useTable[op1] = append(assembler.useTable[op1], assembler.locationCounter+1)
@@ -115,7 +116,6 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if op1SymbolErr != nil {
 					panic("nome do programa inválido na pseudo instrução start.")
 				}
-				assembler.programName = op1
 			case "END":
 				if op1 != EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução end.")
@@ -131,12 +131,10 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if label != EMPTY {
 					assembler.insertIntoSymbolTable(label, RELATIVE)
 				}
-				if op1SymbolErr != nil {
+				if op1SymbolErr == nil {
 					// if a symbol is defined using intdef, it should be relocated from the symbolTable
-					if _, ok := assembler.symbolTable[op1]; ok {
-						delete(assembler.symbolTable, op1)
-					}
-					assembler.definitionTable[op1] = symbolInfo{assembler.locationCounter + 1, RELATIVE}
+					delete(assembler.symbolTable, op1)
+					assembler.definitionTable[op1] = symbolInfo{assembler.locationCounter, ABSOLUTE}
 				}
 			case "INTUSE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
@@ -147,7 +145,12 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if label == EMPTY || op1 == EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução const.")
 				}
-
+				info, ok := assembler.definitionTable[label]
+				if ok && validateSymbol(label) == nil {
+					if info.mode == ABSOLUTE {
+						assembler.definitionTable[label] = symbolInfo{assembler.locationCounter, RELATIVE}
+					}
+				}
 			case "SPACE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
 					panic("sintaxe inválida na pseudo instrução space.")
@@ -195,6 +198,7 @@ func (assembler *Assembler) secondPass(file *os.File) {
 
 	for scanner.Scan() {
 		line, isComment := readLine(scanner)
+		line = line
 		if isComment {
 			continue
 		}

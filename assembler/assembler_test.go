@@ -1,6 +1,7 @@
 package assembler
 
 import (
+	"fmt"
 	"math"
 	"os"
 	"saturn/shared"
@@ -8,7 +9,6 @@ import (
 	"testing"
 )
 
-// only testing START and CONST
 func TestFirstPass(t *testing.T) {
 	file, err := os.Open("first_pass_test.asm")
 	if err != nil {
@@ -19,14 +19,62 @@ func TestFirstPass(t *testing.T) {
 	assembler := New()
 
 	assembler.firstPass(file)
-	if assembler.programName != "firstPassTest" {
-		t.Fatalf("wrong program name")
+
+	//symbol table:
+	label := "SIG"
+	if _, ok := assembler.symbolTable[label]; !ok {
+		t.Fatalf("missing " + label + " in symbol table")
 	}
-	X := assembler.symbolTable["X"]
-	if X != 5 {
-		t.Fatalf("const produced wrong result on symbol table")
+	label = "PROG"
+	if _, ok := assembler.symbolTable[label]; ok {
+		t.Fatalf(label + " should be in definition table")
 	}
-	//if assembler.symbolTable["A"] !=
+
+	//definition table:
+	label = "PROG"
+	if _, ok := assembler.definitionTable[label]; !ok {
+		t.Fatalf("missing " + label + " in definition table")
+		//if info.address != 0 {
+
+		//}
+	}
+
+	label = "UP"
+	info, ok := assembler.definitionTable[label]
+	if !ok {
+		t.Fatalf("missing " + label + " in definition table")
+
+	}
+	if info.address != 6 {
+		fmt.Println(info.address)
+		t.Fatalf("incorrect address on label " + label)
+	}
+
+	label = "DOWN"
+	info, ok = assembler.definitionTable[label]
+	if !ok {
+		t.Fatalf("missing " + label + " in definition table")
+
+	}
+	if info.address != 7 {
+		t.Fatalf("incorrect address on label " + label)
+	}
+
+	//use table:
+	label = "LOOP"
+	if slice, ok := assembler.useTable[label]; !ok {
+		t.Fatalf("missing " + label + " in definition table")
+		if len(slice) > 1 || slice[0] != 3 {
+			t.Fatalf("incorrect slice in label " + label)
+		}
+	}
+	label = "X"
+	if slice, ok := assembler.useTable[label]; !ok {
+		t.Fatalf("missing " + label + " in definition table")
+		if len(slice) != 0 {
+			t.Fatalf("incorrect slice in label " + label)
+		}
+	}
 }
 
 // missing literal tests

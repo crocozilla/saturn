@@ -1,7 +1,8 @@
 package main
 
 import (
-	"saturn/gui"
+	"saturn/assembler"
+	// "saturn/gui"
 )
 
 //TODO: código a ser executado deve ser guardado na maquina
@@ -10,7 +11,9 @@ import (
 //"saturn/gui"
 
 func main() {
-	program := ReadProgram("./program.txt")
-	gui.InsertProgram(program)
-	gui.Run()
+	// program := ReadProgram("./program.txt")
+	// gui.InsertProgram(program)
+	// gui.Run()
+
+	assembler.Run("assembler/first_pass_test.asm")
 }

@@ -3,6 +3,7 @@ package assembler
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"os"
 	"saturn/shared"
 	"strconv"
@@ -190,11 +191,15 @@ func (assembler *Assembler) firstPass(file *os.File) {
 }
 
 func (assembler *Assembler) secondPass(file *os.File) {
-	os.Create("result.obj")
+	objFile, err := os.Create("result.obj")
+	if err != nil {
+		panic(err)
+	}
 
 	// File rewind to origin and reset locationCount
 	file.Seek(0, 0)
 	assembler.locationCounter = 0
+	// fmt.Println(assembler.symbolTable)
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -202,30 +207,79 @@ func (assembler *Assembler) secondPass(file *os.File) {
 		if isComment {
 			continue
 		}
-	os.Create("result.obj")
-
-	// File rewind to origin and reset locationCount
-	file.Seek(0, 0)
-	assembler.locationCounter = 0
 
 		_, operation, operand1, operand2 := parseLine(line)
 
-		opCode, err := getOpcode(operation)
-		if err != nil {
-			panic(err)
+		_, isPseudoInstruction := pseudoOpSizes[operation]
+		if isPseudoInstruction {
+			fmt.Println("Pseudo")
+		} else {
+			opCode, err := getOpcode(operation)
+			if err != nil {
+				panic(err)
+			}
+
+			var op1Value shared.Word
+			if operand1 != EMPTY {
+				if _, err := strconv.Atoi(operand1); err != nil {
+					// Is a label
+					info, okSymbol := assembler.symbolTable[operand1]
+
+					addrUse, okUse := assembler.useTable[operand1]
+
+					addrDef, okDef := assembler.definitionTable[operand1]
+
+					if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
+						panic("label " + operand1 + " defined in multiple tables")
+					}
+
+					if okSymbol {
+
+						op1Value = shared.Word(info.address)
+					} else if okUse {
+						// op1Value = shared.Word(addrUse)
+
+					} else if okDef {
+						// op1Value = shared.Word(addrDef.address)
+
+					}
+
+				} else {
+					// Is a number
+					op1Value, err = getOperandValue(operand1)
+					if err != nil {
+						panic(err)
+					}
+				}
+
+			}
+
+			var op2Value shared.Word
+			if operand2 != EMPTY {
+				if _, err := strconv.Atoi(operand2); err != nil {
+					// Is a label
+					info, ok := assembler.symbolTable[operand2]
+					if !ok {
+						panic("not found label")
+					}
+
+					op2Value = shared.Word(info.address)
+				} else {
+					// Is a number
+					op2Value, err = getOperandValue(operand2)
+					if err != nil {
+						panic(err)
+					}
+				}
+			}
+
+			// Write a new line to obj file
+			outputLine := fmt.Sprintf("%d %d %d \n", opCode, op1Value, op2Value)
+			_, err = objFile.WriteString(outputLine)
+			if err != nil {
+				panic(err)
+			}
 		}
-
-		if _, ok := assembler.symbolTable[operand1]; !ok {
-			assembler.symbolTable[operand1] = shared.Word(assembler.locationCounter)
-		}
-
-		if _, ok := assembler.symbolTable[operand2]; !ok {
-			assembler.symbolTable[operand2] = shared.Word(assembler.locationCounter)
-		}
-
-		assembler.locationCounter++
-
-
 	}
 }
 

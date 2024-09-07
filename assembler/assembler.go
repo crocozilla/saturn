@@ -210,7 +210,10 @@ func (assembler *Assembler) secondPass(file *os.File) {
 	}
 
 	scanner := bufio.NewScanner(file)
+	assembler.lineCounter = 0
+	listLineCounter := 1
 	for scanner.Scan() {
+		assembler.lineCounter++
 		line, isComment := readLine(scanner)
 		if isComment {
 			continue
@@ -220,7 +223,7 @@ func (assembler *Assembler) secondPass(file *os.File) {
 
 		fmt.Printf("%s %s %s\n", operation, operand1, operand2)
 
-		_, isPseudoInstruction := pseudoOpSizes[operation]
+		pseudoOpSize, isPseudoInstruction := pseudoOpSizes[operation]
 		if isPseudoInstruction {
 			switch operation {
 			case "CONST":
@@ -262,17 +265,26 @@ func (assembler *Assembler) secondPass(file *os.File) {
 				}
 
 				// Write a new line to obj file
-				outputLine := fmt.Sprintf("%d %c\n", op1Value, op1Mod)
+				outputLine := fmt.Sprintf("%02d %c\n", op1Value, op1Mod)
 				_, err = objFile.WriteString(outputLine)
 				if err != nil {
 					panic(err)
 				}
+
+				lstLine := fmt.Sprintf("%02d %02d %c    %02d %02d\n", assembler.locationCounter, op1Value, op1Mod, listLineCounter, assembler.lineCounter)
+				_, err = lstFile.WriteString(lstLine)
+				if err != nil {
+					panic(err)
+				}
+				listLineCounter++
 			}
+			assembler.locationCounter += pseudoOpSize
 		} else {
 			opCode, err := getOpcode(operation)
 			if err != nil {
 				panic(err)
 			}
+			opSize := shared.OpSizes[opCode]
 
 			var op1Value shared.Word
 			var op1Mod byte
@@ -349,19 +361,33 @@ func (assembler *Assembler) secondPass(file *os.File) {
 
 			if operand2 == "" {
 				// Write a new line to obj file
-				outputLine := fmt.Sprintf("%d %d %c\n", opCode, op1Value, op1Mod)
+				outputLine := fmt.Sprintf("%02d %02d %c\n", opCode, op1Value, op1Mod)
 				_, err = objFile.WriteString(outputLine)
 				if err != nil {
 					panic(err)
 				}
+				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mod, listLineCounter, assembler.lineCounter)
+				_, err = lstFile.WriteString(lstLine)
+				if err != nil {
+					panic(err)
+				}
+				listLineCounter++
+				//lstLine := fmt.Sprintf("%d ")
 			} else {
 				// Write a new line to obj file
-				outputLine := fmt.Sprintf("%d %d %c %d %c\n", opCode, op1Value, op1Mod, op2Value, op2Mod)
+				outputLine := fmt.Sprintf("%02d %02d %c %d %c\n", opCode, op1Value, op1Mod, op2Value, op2Mod)
 				_, err = objFile.WriteString(outputLine)
 				if err != nil {
 					panic(err)
 				}
+				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mod, op2Value, op2Mod, listLineCounter, assembler.lineCounter)
+				_, err = lstFile.WriteString(lstLine)
+				if err != nil {
+					panic(err)
+				}
+				listLineCounter++
 			}
+			assembler.locationCounter += opSize
 		}
 	}
 

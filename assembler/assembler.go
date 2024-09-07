@@ -195,10 +195,10 @@ func (assembler *Assembler) firstPass(file *os.File) {
 }
 
 func (assembler *Assembler) secondPass(file *os.File) {
+	fmt.Println(assembler.useTable)
 	// File rewind to origin and reset locationCount
 	file.Seek(0, 0)
 	assembler.locationCounter = 0
-	// fmt.Println(assembler.symbolTable)
 
 	if assembler.programName == EMPTY {
 		assembler.addError(errors.New("programa sem nome"))
@@ -221,9 +221,56 @@ func (assembler *Assembler) secondPass(file *os.File) {
 
 		_, operation, operand1, operand2 := parseLine(line)
 
+		fmt.Printf("%s %s %s\n", operation, operand1, operand2)
+
 		_, isPseudoInstruction := pseudoOpSizes[operation]
 		if isPseudoInstruction {
-			fmt.Println("Pseudo")
+			switch operation {
+			case "CONST":
+				var op1Value shared.Word
+				var op1Mod byte
+				if operand1 != EMPTY {
+					if err := validateSymbol(operand1); err == nil {
+						// Is a label
+						infoSym, okSym := assembler.symbolTable[operand1]
+						infoDef, okDef := assembler.definitionTable[operand1]
+
+						_, okUse := assembler.useTable[operand1]
+
+						// TODO: Check if can be in multiple tables
+						// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
+						// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
+						// }
+
+						if okSym {
+							op1Value = shared.Word(infoSym.address)
+							op1Mod = infoSym.mode
+						} else if okUse {
+							// ?
+							op1Value = 0
+							op1Mod = 'A'
+						} else if okDef {
+							op1Value = shared.Word(infoDef.address)
+							op1Mod = infoDef.mode
+						}
+					} else {
+						// Is a number
+						op1Value, err = getOperandValue(operand1)
+						if err != nil {
+							panic(err)
+						}
+
+						op1Mod = 'A'
+					}
+				}
+
+				// Write a new line to obj file
+				outputLine := fmt.Sprintf("%d %c\n", op1Value, op1Mod)
+				_, err = objFile.WriteString(outputLine)
+				if err != nil {
+					panic(err)
+				}
+			}
 		} else {
 			opCode, err := getOpcode(operation)
 			if err != nil {
@@ -231,66 +278,92 @@ func (assembler *Assembler) secondPass(file *os.File) {
 			}
 
 			var op1Value shared.Word
+			var op1Mod byte
 			if operand1 != EMPTY {
-				if err := validateSymbol(operand1); err != nil {
+				if err := validateSymbol(operand1); err == nil {
 					// Is a label
-					info, okSymbol := assembler.symbolTable[operand1]
+					infoSym, okSym := assembler.symbolTable[operand1]
+					infoDef, okDef := assembler.definitionTable[operand1]
 
-					addrUse, okUse := assembler.useTable[operand1]
-					addrUse = addrUse
+					_, okUse := assembler.useTable[operand1]
 
-					addrDef, okDef := assembler.definitionTable[operand1]
-					addrDef = addrDef
+					// TODO: Check if can be in multiple tables
+					// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
+					// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
+					// }
 
-					if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
-						assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
-					}
-
-					if okSymbol {
-
-						op1Value = shared.Word(info.address)
+					if okSym {
+						op1Value = shared.Word(infoSym.address)
+						op1Mod = infoSym.mode
 					} else if okUse {
-						// op1Value = shared.Word(addrUse)
-
+						// ?
+						op1Value = 0
+						op1Mod = 'A'
 					} else if okDef {
-						// op1Value = shared.Word(addrDef.address)
-
+						op1Value = shared.Word(infoDef.address)
+						op1Mod = infoDef.mode
 					}
-
 				} else {
 					// Is a number
 					op1Value, err = getOperandValue(operand1)
 					if err != nil {
 						panic(err)
 					}
-				}
 
+					op1Mod = 'A'
+				}
 			}
 
 			var op2Value shared.Word
+			var op2Mod byte
 			if operand2 != EMPTY {
-				if err := validateSymbol(operand2); err != nil {
+				if err := validateSymbol(operand2); err == nil {
 					// Is a label
-					info, ok := assembler.symbolTable[operand2]
-					if !ok {
-						assembler.addError(errors.New("not found label"))
-					}
+					infoSym, okSym := assembler.symbolTable[operand2]
+					infoDef, okDef := assembler.definitionTable[operand2]
 
-					op2Value = shared.Word(info.address)
+					_, okUse := assembler.useTable[operand2]
+
+					// TODO: Check if can be in multiple tables
+					// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
+					// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
+					// }
+
+					if okSym {
+						op2Value = shared.Word(infoSym.address)
+						op2Mod = infoSym.mode
+					} else if okUse {
+						// ?
+						op1Value = 0
+						op1Mod = 'A'
+					} else if okDef {
+						op2Value = shared.Word(infoDef.address)
+						op2Mod = infoDef.mode
+					}
 				} else {
 					// Is a number
 					op2Value, err = getOperandValue(operand2)
 					if err != nil {
 						panic(err)
 					}
+					op2Mod = 'A'
 				}
 			}
 
-			// Write a new line to obj file
-			outputLine := fmt.Sprintf("%d %d %d \n", opCode, op1Value, op2Value)
-			_, err = objFile.WriteString(outputLine)
-			if err != nil {
-				panic(err)
+			if operand2 == "" {
+				// Write a new line to obj file
+				outputLine := fmt.Sprintf("%d %d %c\n", opCode, op1Value, op1Mod)
+				_, err = objFile.WriteString(outputLine)
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				// Write a new line to obj file
+				outputLine := fmt.Sprintf("%d %d %c %d %c\n", opCode, op1Value, op1Mod, op2Value, op2Mod)
+				_, err = objFile.WriteString(outputLine)
+				if err != nil {
+					panic(err)
+				}
 			}
 		}
 	}
@@ -353,7 +426,7 @@ func getOperandValue(operand string) (shared.Word, error) {
 	default:
 		value, err = strconv.ParseInt(operand, 10, shared.WordSize)
 		if err != nil {
-			return 0, errors.New("número não reconhecido")
+			return 0, errors.New("número " + operand + " não reconhecido")
 		}
 	}
 

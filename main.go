@@ -15,5 +15,5 @@ func main() {
 	// gui.InsertProgram(program)
 	// gui.Run()
 
-	assembler.Run("assembler/first_pass_test.asm")
+	assembler.Run("assembler/assembler_test.asm")
 }

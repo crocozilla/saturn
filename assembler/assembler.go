@@ -95,9 +95,6 @@ func (assembler *Assembler) firstPass(file *os.File) {
 
 		// if operation is a pseudo-instruction, op2 is always EMPTY
 		label, operationString, op1, op2 := parseLine(line)
-		if len(label) > 0 && validateSymbol(label) != nil {
-			panic(validateSymbol(label))
-		}
 		op1SymbolErr := validateSymbol(op1)
 
 		if _, ok := assembler.useTable[op1]; ok {
@@ -492,7 +489,7 @@ func validateSymbol(symbol string) error {
 func (assembler *Assembler) insertIntoProperTable(symbol string) {
 	err := validateSymbol(symbol)
 	if err != nil {
-		panic(err)
+		assembler.addError(err)
 	}
 
 	// if its defined and it is its first use, set its address to current address
@@ -505,7 +502,7 @@ func (assembler *Assembler) insertIntoProperTable(symbol string) {
 
 	_, ok = assembler.symbolTable[symbol]
 	if ok {
-		panic("símbolo " + symbol + " com múltiplas definições.")
+		assembler.addError(errors.New("símbolo " + symbol + " com múltiplas definições."))
 	}
 	assembler.symbolTable[symbol] = symbolInfo{assembler.locationCounter, RELATIVE}
 }

@@ -3,6 +3,7 @@ package assembler
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"os"
 	"saturn/shared"
 	"strconv"
@@ -19,12 +20,16 @@ type symbolInfo struct {
 	mode    byte
 }
 
+type ObjCode []string
+
 type Assembler struct {
 	symbolTable     map[string]symbolInfo
 	definitionTable map[string]symbolInfo
 	useTable        map[string][]uint16
 	locationCounter uint16
+	lineCounter     uint16
 	programName     string
+	errors          []string
 }
 
 func New() *Assembler {
@@ -37,7 +42,6 @@ func New() *Assembler {
 
 // writes to file program.txt as its output
 func Run(filePath string) {
-
 	file, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
@@ -83,6 +87,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
+		assembler.lineCounter++
 		line, isComment := readLine(scanner)
 		if isComment {
 			continue
@@ -90,9 +95,6 @@ func (assembler *Assembler) firstPass(file *os.File) {
 
 		// if operation is a pseudo-instruction, op2 is always EMPTY
 		label, operationString, op1, op2 := parseLine(line)
-		if len(label) > 0 && validateSymbol(label) != nil {
-			panic(validateSymbol(label))
-		}
 		op1SymbolErr := validateSymbol(op1)
 
 		if _, ok := assembler.useTable[op1]; ok {
@@ -108,17 +110,18 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			switch instruction {
 			case "START":
 				if op1 == EMPTY || op2 != EMPTY {
-					panic("sintaxe inválida na pseudo instrução start.")
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução start."))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
 				}
 				if op1SymbolErr != nil {
-					panic("nome do programa inválido na pseudo instrução start.")
+					assembler.addError(errors.New("nome do programa inválido na pseudo instrução start."))
 				}
+				assembler.programName = op1
 			case "END":
 				if op1 != EMPTY || op2 != EMPTY {
-					panic("sintaxe inválida na pseudo instrução end.")
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução end."))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
@@ -126,7 +129,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				return
 			case "INTDEF":
 				if op1 == EMPTY || op2 != EMPTY {
-					panic("sintaxe inválida na pseudo instrução intdef.")
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução intdef."))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
@@ -138,22 +141,22 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				}
 			case "INTUSE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
-					panic("sintaxe inválida na pseudo instrução intuse.")
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução intuse."))
 				}
 				assembler.useTable[label] = []uint16{}
 			case "CONST":
 				if label == EMPTY || op1 == EMPTY || op2 != EMPTY {
-					panic("sintaxe inválida na pseudo instrução const.")
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução const."))
 				}
 				assembler.insertIntoProperTable(label)
 			case "SPACE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
-					panic("sintaxe inválida na pseudo instrução space.")
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução space."))
 				}
 				assembler.insertIntoProperTable(label)
 			case "STACK":
 				if op1 == EMPTY || op2 != EMPTY {
-					panic("sintaxe inválida na pseudo instrução stack.")
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução stack."))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
@@ -163,7 +166,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 		} else {
 			opcode, err := getOpcode(operationString)
 			if err != nil {
-				panic("operação " + operationString + " é inválida.")
+				assembler.addError(errors.New("operação " + operationString + " é inválida."))
 			}
 
 			opSize := shared.OpSizes[opcode]
@@ -172,7 +175,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			sizeThreeError := opSize == 3 && (op1 == EMPTY || op2 == EMPTY)
 			invalidSyntax := sizeOneError || sizeTwoError || sizeThreeError
 			if invalidSyntax {
-				panic("sintaxe inválida na operação " + operationString + ".")
+				assembler.addError(errors.New("sintaxe inválida na operação " + operationString + "."))
 			}
 
 			if len(label) != 0 {
@@ -184,21 +187,232 @@ func (assembler *Assembler) firstPass(file *os.File) {
 
 	}
 
-	panic("sem instrução \"end\".")
+	assembler.addError(errors.New("sem instrução \"end\"."))
 
 }
 
 func (assembler *Assembler) secondPass(file *os.File) {
-	scanner := bufio.NewScanner(file)
+	fmt.Println(assembler.useTable)
+	// File rewind to origin and reset locationCount
+	file.Seek(0, 0)
+	assembler.locationCounter = 0
 
+	if assembler.programName == EMPTY {
+		assembler.addError(errors.New("programa sem nome"))
+	}
+	objFile, err := os.Create(assembler.programName + ".obj")
+	if err != nil {
+		panic(err)
+	}
+	lstFile, err := os.Create(assembler.programName + ".lst")
+	if err != nil {
+		panic(err)
+	}
+
+	scanner := bufio.NewScanner(file)
+	assembler.lineCounter = 0
+	listLineCounter := 1
 	for scanner.Scan() {
+		assembler.lineCounter++
 		line, isComment := readLine(scanner)
 		if isComment {
 			continue
 		}
 
-		//_, operationString, op1, op2 := parseLine(line)
+		_, operation, operand1, operand2 := parseLine(line)
 
+		fmt.Printf("%s %s %s\n", operation, operand1, operand2)
+
+		pseudoOpSize, isPseudoInstruction := pseudoOpSizes[operation]
+		if isPseudoInstruction {
+			switch operation {
+			case "CONST":
+				var op1Value shared.Word
+				var op1Mod byte
+				if operand1 != EMPTY {
+					if err := validateSymbol(operand1); err == nil {
+						// Is a label
+						infoSym, okSym := assembler.symbolTable[operand1]
+						infoDef, okDef := assembler.definitionTable[operand1]
+
+						_, okUse := assembler.useTable[operand1]
+
+						// TODO: Check if can be in multiple tables
+						// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
+						// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
+						// }
+
+						if okSym {
+							op1Value = shared.Word(infoSym.address)
+							op1Mod = infoSym.mode
+						} else if okUse {
+							// ?
+							op1Value = 0
+							op1Mod = 'A'
+						} else if okDef {
+							op1Value = shared.Word(infoDef.address)
+							op1Mod = infoDef.mode
+						}
+					} else {
+						// Is a number
+						op1Value, err = getOperandValue(operand1)
+						if err != nil {
+							panic(err)
+						}
+
+						op1Mod = 'A'
+					}
+				}
+
+				// Write a new line to obj file
+				outputLine := fmt.Sprintf("%02d %c\n", op1Value, op1Mod)
+				_, err = objFile.WriteString(outputLine)
+				if err != nil {
+					panic(err)
+				}
+
+				lstLine := fmt.Sprintf("%02d %02d %c    %02d %02d\n", assembler.locationCounter, op1Value, op1Mod, listLineCounter, assembler.lineCounter)
+				_, err = lstFile.WriteString(lstLine)
+				if err != nil {
+					panic(err)
+				}
+				listLineCounter++
+			}
+			assembler.locationCounter += pseudoOpSize
+		} else {
+			opCode, err := getOpcode(operation)
+			if err != nil {
+				panic(err)
+			}
+			opSize := shared.OpSizes[opCode]
+
+			var op1Value shared.Word
+			var op1Mod byte
+			if operand1 != EMPTY {
+				if err := validateSymbol(operand1); err == nil {
+					// Is a label
+					infoSym, okSym := assembler.symbolTable[operand1]
+					infoDef, okDef := assembler.definitionTable[operand1]
+
+					_, okUse := assembler.useTable[operand1]
+
+					// TODO: Check if can be in multiple tables
+					// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
+					// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
+					// }
+
+					if okSym {
+						op1Value = shared.Word(infoSym.address)
+						op1Mod = infoSym.mode
+					} else if okUse {
+						// ?
+						op1Value = 0
+						op1Mod = 'A'
+					} else if okDef {
+						op1Value = shared.Word(infoDef.address)
+						op1Mod = infoDef.mode
+					}
+				} else {
+					// Is a number
+					op1Value, err = getOperandValue(operand1)
+					if err != nil {
+						panic(err)
+					}
+
+					op1Mod = 'A'
+				}
+			}
+
+			var op2Value shared.Word
+			var op2Mod byte
+			if operand2 != EMPTY {
+				if err := validateSymbol(operand2); err == nil {
+					// Is a label
+					infoSym, okSym := assembler.symbolTable[operand2]
+					infoDef, okDef := assembler.definitionTable[operand2]
+
+					_, okUse := assembler.useTable[operand2]
+
+					// TODO: Check if can be in multiple tables
+					// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
+					// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
+					// }
+
+					if okSym {
+						op2Value = shared.Word(infoSym.address)
+						op2Mod = infoSym.mode
+					} else if okUse {
+						// ?
+						op1Value = 0
+						op1Mod = 'A'
+					} else if okDef {
+						op2Value = shared.Word(infoDef.address)
+						op2Mod = infoDef.mode
+					}
+				} else {
+					// Is a number
+					op2Value, err = getOperandValue(operand2)
+					if err != nil {
+						panic(err)
+					}
+					op2Mod = 'A'
+				}
+			}
+
+			if operand2 == "" {
+				// Write a new line to obj file
+				outputLine := fmt.Sprintf("%02d %02d %c\n", opCode, op1Value, op1Mod)
+				_, err = objFile.WriteString(outputLine)
+				if err != nil {
+					panic(err)
+				}
+				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mod, listLineCounter, assembler.lineCounter)
+				_, err = lstFile.WriteString(lstLine)
+				if err != nil {
+					panic(err)
+				}
+				listLineCounter++
+				//lstLine := fmt.Sprintf("%d ")
+			} else {
+				// Write a new line to obj file
+				outputLine := fmt.Sprintf("%02d %02d %c %d %c\n", opCode, op1Value, op1Mod, op2Value, op2Mod)
+				_, err = objFile.WriteString(outputLine)
+				if err != nil {
+					panic(err)
+				}
+				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mod, op2Value, op2Mod, listLineCounter, assembler.lineCounter)
+				_, err = lstFile.WriteString(lstLine)
+				if err != nil {
+					panic(err)
+				}
+				listLineCounter++
+			}
+			assembler.locationCounter += opSize
+		}
+	}
+
+	assembler.writeErrorsToLst(lstFile)
+}
+
+func (assembler *Assembler) addError(err error) {
+	lineNumber := strconv.Itoa(int(assembler.lineCounter))
+	errString := "erro na linha " + lineNumber + ": " + err.Error() + "\n"
+	assembler.errors = append(assembler.errors, errString)
+}
+
+func (assembler *Assembler) writeErrorsToLst(lstFile *os.File) {
+	if len(assembler.errors) == 0 {
+		_, err := lstFile.WriteString("Nenhum erro detectado.\n")
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+	for _, errorString := range assembler.errors {
+		_, err := lstFile.WriteString(errorString)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -235,7 +449,7 @@ func getOperandValue(operand string) (shared.Word, error) {
 	default:
 		value, err = strconv.ParseInt(operand, 10, shared.WordSize)
 		if err != nil {
-			return 0, errors.New("número não reconhecido")
+			return 0, errors.New("número " + operand + " não reconhecido")
 		}
 	}
 
@@ -301,7 +515,7 @@ func validateSymbol(symbol string) error {
 func (assembler *Assembler) insertIntoProperTable(symbol string) {
 	err := validateSymbol(symbol)
 	if err != nil {
-		panic(err)
+		assembler.addError(err)
 	}
 
 	// if its defined and it is its first use, set its address to current address
@@ -314,7 +528,7 @@ func (assembler *Assembler) insertIntoProperTable(symbol string) {
 
 	_, ok = assembler.symbolTable[symbol]
 	if ok {
-		panic("símbolo " + symbol + " com múltiplas definições.")
+		assembler.addError(errors.New("símbolo " + symbol + " com múltiplas definições."))
 	}
 	assembler.symbolTable[symbol] = symbolInfo{assembler.locationCounter, RELATIVE}
 }

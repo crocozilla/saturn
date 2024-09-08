@@ -10,7 +10,7 @@ import (
 )
 
 func TestFirstPass(t *testing.T) {
-	file, err := os.Open("first_pass_test.asm")
+	file, err := os.Open("assembler_test.asm")
 	if err != nil {
 		panic(err)
 	}
@@ -89,7 +89,7 @@ func TestFirstPass(t *testing.T) {
 		t.Fatalf("incorrect slice in label " + label)
 	}
 
-	file2, err := os.Open("first_pass_test_2.asm")
+	file2, err := os.Open("assembler_test_2.asm")
 	if err != nil {
 		panic(err)
 	}
@@ -169,6 +169,19 @@ func TestFirstPass(t *testing.T) {
 	if slice[0] != 3 {
 		t.Fatalf("incorrect slice in label " + label)
 	}
+}
+
+func TestSecondPass(t *testing.T) {
+	file, err := os.Open("assembler_test.asm")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	assembler := New()
+
+	assembler.firstPass(file)
+	assembler.secondPass(file)
 }
 
 // missing literal tests

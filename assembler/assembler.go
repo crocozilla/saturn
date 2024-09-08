@@ -111,18 +111,18 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			switch instruction {
 			case "START":
 				if op1 == EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução start."))
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução start"))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
 				}
 				if op1SymbolErr != nil {
-					assembler.addError(errors.New("nome do programa inválido na pseudo instrução start."))
+					assembler.addError(errors.New("nome do programa inválido na pseudo instrução start"))
 				}
 				assembler.programName = op1
 			case "END":
 				if op1 != EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução end."))
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução end"))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
@@ -130,7 +130,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				return
 			case "INTDEF":
 				if op1 == EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução intdef."))
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução intdef"))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
@@ -142,22 +142,22 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				}
 			case "INTUSE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução intuse."))
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução intuse"))
 				}
 				assembler.useTable[label] = []uint16{}
 			case "CONST":
 				if label == EMPTY || op1 == EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução const."))
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução const"))
 				}
 				assembler.insertIntoProperTable(label)
 			case "SPACE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução space."))
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução space"))
 				}
 				assembler.insertIntoProperTable(label)
 			case "STACK":
 				if op1 == EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução stack."))
+					assembler.addError(errors.New("sintaxe inválida na pseudo instrução stack"))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
@@ -167,7 +167,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 		} else {
 			opcode, err := getOpcode(operationString)
 			if err != nil {
-				assembler.addError(errors.New("operação " + operationString + " é inválida."))
+				assembler.addError(errors.New("operação " + operationString + " é inválida"))
 			}
 
 			opSize := shared.OpSizes[opcode]
@@ -176,7 +176,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			sizeThreeError := opSize == 3 && (op1 == EMPTY || op2 == EMPTY)
 			invalidSyntax := sizeOneError || sizeTwoError || sizeThreeError
 			if invalidSyntax {
-				assembler.addError(errors.New("sintaxe inválida na operação " + operationString + "."))
+				assembler.addError(errors.New("sintaxe inválida na operação " + operationString))
 			}
 
 			if len(label) != 0 {
@@ -188,7 +188,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 
 	}
 
-	assembler.addError(errors.New("sem instrução \"end\"."))
+	assembler.addError(errors.New("sem instrução \"end\""))
 
 }
 

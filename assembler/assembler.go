@@ -212,6 +212,8 @@ func (assembler *Assembler) secondPass(file *os.File) {
 	scanner := bufio.NewScanner(file)
 	assembler.lineCounter = 0
 	listLineCounter := 1
+	var op1Value, op2Value shared.Word
+	var op1Mode, op2Mode byte
 	for scanner.Scan() {
 		assembler.lineCounter++
 		line, isComment := readLine(scanner)
@@ -227,51 +229,18 @@ func (assembler *Assembler) secondPass(file *os.File) {
 		if isPseudoInstruction {
 			switch operation {
 			case "CONST":
-				var op1Value shared.Word
-				var op1Mod byte
 				if operand1 != EMPTY {
-					if err := validateSymbol(operand1); err == nil {
-						// Is a label
-						infoSym, okSym := assembler.symbolTable[operand1]
-						infoDef, okDef := assembler.definitionTable[operand1]
-
-						_, okUse := assembler.useTable[operand1]
-
-						// TODO: Check if can be in multiple tables
-						// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
-						// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
-						// }
-
-						if okSym {
-							op1Value = shared.Word(infoSym.address)
-							op1Mod = infoSym.mode
-						} else if okUse {
-							// ?
-							op1Value = 0
-							op1Mod = 'A'
-						} else if okDef {
-							op1Value = shared.Word(infoDef.address)
-							op1Mod = infoDef.mode
-						}
-					} else {
-						// Is a number
-						op1Value, err = getOperandValue(operand1)
-						if err != nil {
-							panic(err)
-						}
-
-						op1Mod = 'A'
-					}
+					op1Value, op1Mode = assembler.getOperandValueAndMode(operand1)
 				}
 
 				// Write a new line to obj file
-				outputLine := fmt.Sprintf("%02d %c\n", op1Value, op1Mod)
+				outputLine := fmt.Sprintf("%02d %c\n", op1Value, op1Mode)
 				_, err = objFile.WriteString(outputLine)
 				if err != nil {
 					panic(err)
 				}
 
-				lstLine := fmt.Sprintf("%02d %02d %c    %02d %02d\n", assembler.locationCounter, op1Value, op1Mod, listLineCounter, assembler.lineCounter)
+				lstLine := fmt.Sprintf("%02d %02d %c    %02d %02d\n", assembler.locationCounter, op1Value, op1Mode, listLineCounter, assembler.lineCounter)
 				_, err = lstFile.WriteString(lstLine)
 				if err != nil {
 					panic(err)
@@ -286,87 +255,22 @@ func (assembler *Assembler) secondPass(file *os.File) {
 			}
 			opSize := shared.OpSizes[opCode]
 
-			var op1Value shared.Word
-			var op1Mod byte
 			if operand1 != EMPTY {
-				if err := validateSymbol(operand1); err == nil {
-					// Is a label
-					infoSym, okSym := assembler.symbolTable[operand1]
-					infoDef, okDef := assembler.definitionTable[operand1]
-
-					_, okUse := assembler.useTable[operand1]
-
-					// TODO: Check if can be in multiple tables
-					// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
-					// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
-					// }
-
-					if okSym {
-						op1Value = shared.Word(infoSym.address)
-						op1Mod = infoSym.mode
-					} else if okUse {
-						// ?
-						op1Value = 0
-						op1Mod = 'A'
-					} else if okDef {
-						op1Value = shared.Word(infoDef.address)
-						op1Mod = infoDef.mode
-					}
-				} else {
-					// Is a number
-					op1Value, err = getOperandValue(operand1)
-					if err != nil {
-						panic(err)
-					}
-
-					op1Mod = 'A'
-				}
+				op1Value, op1Mode = assembler.getOperandValueAndMode(operand1)
 			}
 
-			var op2Value shared.Word
-			var op2Mod byte
 			if operand2 != EMPTY {
-				if err := validateSymbol(operand2); err == nil {
-					// Is a label
-					infoSym, okSym := assembler.symbolTable[operand2]
-					infoDef, okDef := assembler.definitionTable[operand2]
-
-					_, okUse := assembler.useTable[operand2]
-
-					// TODO: Check if can be in multiple tables
-					// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
-					// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
-					// }
-
-					if okSym {
-						op2Value = shared.Word(infoSym.address)
-						op2Mod = infoSym.mode
-					} else if okUse {
-						// ?
-						op1Value = 0
-						op1Mod = 'A'
-					} else if okDef {
-						op2Value = shared.Word(infoDef.address)
-						op2Mod = infoDef.mode
-					}
-				} else {
-					// Is a number
-					op2Value, err = getOperandValue(operand2)
-					if err != nil {
-						panic(err)
-					}
-					op2Mod = 'A'
-				}
+				op2Value, op2Mode = assembler.getOperandValueAndMode(operand2)
 			}
 
-			if operand2 == "" {
+			if operand2 == EMPTY {
 				// Write a new line to obj file
-				outputLine := fmt.Sprintf("%02d %02d %c\n", opCode, op1Value, op1Mod)
+				outputLine := fmt.Sprintf("%02d %02d %c\n", opCode, op1Value, op1Mode)
 				_, err = objFile.WriteString(outputLine)
 				if err != nil {
 					panic(err)
 				}
-				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mod, listLineCounter, assembler.lineCounter)
+				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mode, listLineCounter, assembler.lineCounter)
 				_, err = lstFile.WriteString(lstLine)
 				if err != nil {
 					panic(err)
@@ -375,12 +279,12 @@ func (assembler *Assembler) secondPass(file *os.File) {
 				//lstLine := fmt.Sprintf("%d ")
 			} else {
 				// Write a new line to obj file
-				outputLine := fmt.Sprintf("%02d %02d %c %d %c\n", opCode, op1Value, op1Mod, op2Value, op2Mod)
+				outputLine := fmt.Sprintf("%02d %02d %c %d %c\n", opCode, op1Value, op1Mode, op2Value, op2Mode)
 				_, err = objFile.WriteString(outputLine)
 				if err != nil {
 					panic(err)
 				}
-				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mod, op2Value, op2Mod, listLineCounter, assembler.lineCounter)
+				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mode, op2Value, op2Mode, listLineCounter, assembler.lineCounter)
 				_, err = lstFile.WriteString(lstLine)
 				if err != nil {
 					panic(err)
@@ -454,6 +358,43 @@ func getOperandValue(operand string) (shared.Word, error) {
 	}
 
 	return shared.Word(value), nil
+}
+
+// assumes operand is not empty
+func (assembler *Assembler) getOperandValueAndMode(operand string) (value shared.Word, mode byte) {
+	if err := validateSymbol(operand); err == nil {
+		// Is a label
+		infoSym, okSym := assembler.symbolTable[operand]
+		infoDef, okDef := assembler.definitionTable[operand]
+
+		_, okUse := assembler.useTable[operand]
+
+		// TODO: Check if can be in multiple tables
+		// if (okSymbol && okUse) || (okSymbol && okDef) || (okDef && okUse) {
+		// 	assembler.addError(errors.New("label " + operand1 + " defined in multiple tables"))
+		// }
+
+		if okSym {
+			value = shared.Word(infoSym.address)
+			mode = infoSym.mode
+		} else if okUse {
+			// ?
+			value = 0
+			mode = 'A'
+		} else if okDef {
+			value = shared.Word(infoDef.address)
+			mode = infoDef.mode
+		}
+	} else {
+		// Is a number
+		value, err = getOperandValue(operand)
+		if err != nil {
+			panic(err)
+		}
+		mode = 'A'
+	}
+
+	return value, mode
 }
 
 func removeAddressMode(operand string) (string, error) {

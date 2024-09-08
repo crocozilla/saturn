@@ -28,6 +28,7 @@ type Assembler struct {
 	useTable        map[string][]uint16
 	locationCounter uint16
 	lineCounter     uint16
+	lstLineCounter  uint16
 	programName     string
 	errors          []string
 }
@@ -211,49 +212,49 @@ func (assembler *Assembler) secondPass(file *os.File) {
 
 	scanner := bufio.NewScanner(file)
 	assembler.lineCounter = 0
-	listLineCounter := 1
+	assembler.lstLineCounter = 1
 	var op1Value, op2Value shared.Word
 	var op1Mode, op2Mode byte
+	var zeroValuedByte byte
+	var opCode shared.Operation
+
 	for scanner.Scan() {
+		assembleLine := false
 		assembler.lineCounter++
+
 		line, isComment := readLine(scanner)
 		if isComment {
 			continue
 		}
 
+		// method 'assembleLine' needs these values zeroed if unused
+		op1Mode = zeroValuedByte
+		op2Mode = zeroValuedByte
+
 		_, operation, operand1, operand2 := parseLine(line)
 
 		fmt.Printf("%s %s %s\n", operation, operand1, operand2)
 
-		pseudoOpSize, isPseudoInstruction := pseudoOpSizes[operation]
+		opSize, isPseudoInstruction := pseudoOpSizes[operation]
 		if isPseudoInstruction {
 			switch operation {
 			case "CONST":
 				if operand1 != EMPTY {
 					op1Value, op1Mode = assembler.getOperandValueAndMode(operand1)
 				}
-
-				// Write a new line to obj file
-				outputLine := fmt.Sprintf("%02d %c\n", op1Value, op1Mode)
-				_, err = objFile.WriteString(outputLine)
-				if err != nil {
-					panic(err)
-				}
-
-				lstLine := fmt.Sprintf("%02d %02d %c    %02d %02d\n", assembler.locationCounter, op1Value, op1Mode, listLineCounter, assembler.lineCounter)
-				_, err = lstFile.WriteString(lstLine)
-				if err != nil {
-					panic(err)
-				}
-				listLineCounter++
+				assembleLine = true
+			default:
+				assembleLine = false
 			}
-			assembler.locationCounter += pseudoOpSize
+
 		} else {
-			opCode, err := getOpcode(operation)
+			assembleLine = true
+			opCode, err = getOpcode(operation)
 			if err != nil {
 				panic(err)
 			}
-			opSize := shared.OpSizes[opCode]
+			// redefines opSize
+			opSize = shared.OpSizes[opCode]
 
 			if operand1 != EMPTY {
 				op1Value, op1Mode = assembler.getOperandValueAndMode(operand1)
@@ -263,36 +264,14 @@ func (assembler *Assembler) secondPass(file *os.File) {
 				op2Value, op2Mode = assembler.getOperandValueAndMode(operand2)
 			}
 
-			if operand2 == EMPTY {
-				// Write a new line to obj file
-				outputLine := fmt.Sprintf("%02d %02d %c\n", opCode, op1Value, op1Mode)
-				_, err = objFile.WriteString(outputLine)
-				if err != nil {
-					panic(err)
-				}
-				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mode, listLineCounter, assembler.lineCounter)
-				_, err = lstFile.WriteString(lstLine)
-				if err != nil {
-					panic(err)
-				}
-				listLineCounter++
-				//lstLine := fmt.Sprintf("%d ")
-			} else {
-				// Write a new line to obj file
-				outputLine := fmt.Sprintf("%02d %02d %c %d %c\n", opCode, op1Value, op1Mode, op2Value, op2Mode)
-				_, err = objFile.WriteString(outputLine)
-				if err != nil {
-					panic(err)
-				}
-				lstLine := fmt.Sprintf("%02d %02d %02d %c %02d %c %02d %02d\n", assembler.locationCounter, opCode, op1Value, op1Mode, op2Value, op2Mode, listLineCounter, assembler.lineCounter)
-				_, err = lstFile.WriteString(lstLine)
-				if err != nil {
-					panic(err)
-				}
-				listLineCounter++
-			}
-			assembler.locationCounter += opSize
 		}
+
+		if assembleLine {
+			assembler.assembleLine(objFile, lstFile, isPseudoInstruction, opCode, op1Value, op1Mode, op2Value, op2Mode)
+		}
+
+		assembler.locationCounter += opSize
+
 	}
 
 	assembler.writeErrorsToLst(lstFile)
@@ -318,6 +297,57 @@ func (assembler *Assembler) writeErrorsToLst(lstFile *os.File) {
 			panic(err)
 		}
 	}
+}
+
+// checks if mode is unset to see if operands are being used, ignores them if needed
+func (assembler *Assembler) assembleLine(objFile *os.File, lstFile *os.File, isPseudoInstruction bool,
+	opCode shared.Operation, op1Value shared.Word, op1Mode byte, op2Value shared.Word, op2Mode byte) {
+	var objLine string
+	var lstLine string = fmt.Sprintf("%02d ", assembler.locationCounter)
+	var zeroValuedByte byte
+	smallPadding := "   "
+	padding := "     "
+
+	if !isPseudoInstruction {
+		opCodeString := fmt.Sprintf("%02d ", opCode)
+		objLine += opCodeString
+		lstLine += opCodeString
+	} else {
+		objLine += smallPadding
+		lstLine += smallPadding
+	}
+
+	if op1Mode != zeroValuedByte {
+		op1String := fmt.Sprintf("%02d %c ", op1Value, op1Mode)
+		objLine += op1String
+		lstLine += op1String
+	} else {
+		lstLine += padding
+	}
+	if op2Mode != zeroValuedByte {
+		op2String := fmt.Sprintf("%02d %c ", op2Value, op2Mode)
+		objLine += op2String
+		lstLine += op2String
+	} else {
+		lstLine += padding
+	}
+
+	lstLine += fmt.Sprintf("%02d %02d", assembler.lstLineCounter, assembler.lineCounter)
+
+	objLine += "\n"
+	lstLine += "\n"
+
+	_, err := objFile.WriteString(objLine)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = lstFile.WriteString(lstLine)
+	if err != nil {
+		panic(err)
+	}
+
+	assembler.lstLineCounter++
 }
 
 func getOperandValue(operand string) (shared.Word, error) {

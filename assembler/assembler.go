@@ -266,6 +266,8 @@ func (assembler *Assembler) secondPass(file *os.File) {
 
 		}
 
+		assembler.addAddressModeToOpcode(&opCode, operand1, operand2)
+
 		if assembleLine {
 			assembler.assembleLine(objFile, lstFile, isPseudoInstruction, opCode, op1Value, op1Mode, op2Value, op2Mode)
 		}
@@ -299,13 +301,44 @@ func (assembler *Assembler) writeErrorsToLst(lstFile *os.File) {
 	}
 }
 
+func (assembler *Assembler) addAddressModeToOpcode(opCode *shared.Operation, operand1 string, operand2 string) {
+	if operand1 != EMPTY {
+		op1AddressMode, err := getAddressMode(operand1)
+		if err != nil {
+			assembler.addError(err)
+		}
+		if op1AddressMode == shared.DIRECT {
+			*opCode += 0b01_00 << 5
+		} else if op1AddressMode == shared.INDIRECT {
+			*opCode += 0b10_00 << 5
+		} else if op1AddressMode == shared.IMMEDIATE {
+			*opCode += 0b11_00 << 5
+		}
+	}
+
+	if operand2 != EMPTY {
+		op2AddressMode, err := getAddressMode(operand2)
+		if err != nil {
+			assembler.addError(err)
+		}
+		if op2AddressMode == shared.DIRECT {
+			*opCode += 0b00_01 << 5
+		} else if op2AddressMode == shared.INDIRECT {
+			*opCode += 0b00_10 << 5
+		} else if op2AddressMode == shared.IMMEDIATE {
+			*opCode += 0b00_11 << 5
+		}
+	}
+
+}
+
 // checks if mode is unset to see if operands are being used, ignores them if needed
 func (assembler *Assembler) assembleLine(objFile *os.File, lstFile *os.File, isPseudoInstruction bool,
 	opCode shared.Operation, op1Value shared.Word, op1Mode byte, op2Value shared.Word, op2Mode byte) {
 	var objLine string
 	var lstLine string = fmt.Sprintf("%02d ", assembler.locationCounter)
 	var zeroValuedByte byte
-	smallPadding := "   "
+	smallPadding := "    "
 	padding := "     "
 
 	if !isPseudoInstruction {

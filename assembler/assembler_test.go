@@ -182,6 +182,49 @@ func TestSecondPass(t *testing.T) {
 
 	assembler.firstPass(file)
 	assembler.secondPass(file)
+
+	opcode := shared.ADD
+	operand1 := "1"
+	operand2 := EMPTY
+
+	assembler.addAddressModeToOpcode(&opcode, operand1, operand2)
+
+	if shared.ExtractAddressMode(shared.Word(opcode)) != shared.DIRECT {
+		t.Fatalf("incorrect address mode on second pass")
+	}
+
+	opcode = shared.ADD
+	operand1 = "1,I"
+	operand2 = EMPTY
+
+	assembler.addAddressModeToOpcode(&opcode, operand1, operand2)
+
+	if shared.ExtractAddressMode(shared.Word(opcode)) != shared.INDIRECT {
+		t.Fatalf("incorrect address mode on second pass")
+	}
+
+	opcode = shared.ADD
+	operand1 = "#1"
+	operand2 = EMPTY
+
+	assembler.addAddressModeToOpcode(&opcode, operand1, operand2)
+
+	if shared.ExtractAddressMode(shared.Word(opcode)) != shared.IMMEDIATE {
+		t.Fatalf("incorrect address mode on second pass")
+	}
+
+	opcode = shared.COPY
+	operand1 = "1,I"
+	operand2 = "#2"
+
+	assembler.addAddressModeToOpcode(&opcode, operand1, operand2)
+
+	if shared.ExtractAddressMode(shared.Word(opcode)) != shared.INDIRECT_IMMEDIATE {
+		t.Fatalf("incorrect address mode on second pass")
+	}
+
+	os.Remove("FIRST.lst")
+	os.Remove("FIRST.obj")
 }
 
 // missing literal tests

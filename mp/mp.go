@@ -121,6 +121,7 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 			isDefinition = true
 
 		} else if operationString == "MEND" {
+			deleteLevelFromStack(parameterStack, definitionLevel)
 			definitionLevel--
 			if definitionLevel == 0 {
 				macroProcessor.macroDefinitiontable[macroName] = macro
@@ -180,6 +181,17 @@ func addToStack(parameterStack [][2]string, definitionLevel int, operands []stri
 		parameterStack = append(parameterStack, [2]string{op, fmt.Sprintf("(%d,%d)", definitionLevel, i+1)})
 	}
 	return parameterStack
+}
+
+func deleteLevelFromStack(parameterStack [][2]string, definitionLevel int) {
+	level := 2
+	for i := len(parameterStack) - 1; getDigit(parameterStack[i][1][level]) == definitionLevel; i-- {
+		parameterStack = parameterStack[:len(parameterStack)-1]
+	}
+}
+
+func getDigit(character byte) int {
+	return int(character) - '0'
 }
 
 func checkMacroOperands(operands []string) error {

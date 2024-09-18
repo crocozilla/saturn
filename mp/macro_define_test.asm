@@ -1,0 +1,10 @@
+ MACRO
+  M1 &A   &B
+ ADD &A
+ &B  &A
+ MACRO
+ TEST
+ ADD @2
+ MEND
+ MEND
+

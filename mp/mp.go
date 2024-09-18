@@ -85,6 +85,7 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 	var macroName string
 	var macroOperands []string
 	isDefinition := true // first line after MACRO
+	definitionLevel := 1
 	for scanner.Scan() {
 		macroProcessor.lineCounter++
 
@@ -104,14 +105,21 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 				panic(err)
 			}
 			isDefinition = false
+			continue
 		}
 
 		label, operationString, lineOperands := parser.MacroLine(line)
 		label, operationString, lineOperands = substituteOperands(label, operationString, lineOperands, macroOperands)
 
-		if operationString == "MEND" {
-			macroProcessor.macroDefinitiontable[macroName] = macro
-			return
+		if operationString == "MACRO" {
+			definitionLevel++
+
+		} else if operationString == "MEND" {
+			definitionLevel--
+			if definitionLevel == 0 {
+				macroProcessor.macroDefinitiontable[macroName] = macro
+				return
+			}
 		}
 
 		macroLine := createMacroLine(label, operationString, lineOperands)
@@ -125,10 +133,10 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 
 func createMacroLine(label, operation string, operands []string) string {
 	var macroLine string
-	macroLine += label
-	macroLine += operation
+	macroLine += label + " "
+	macroLine += operation + " "
 	for _, op := range operands {
-		macroLine += op
+		macroLine += op + " "
 	}
 
 	return macroLine
@@ -146,15 +154,15 @@ func checkMacroOperands(operands []string) error {
 func substituteOperands(label, operation string, lineOperands, macroOperands []string) (string, string, []string) {
 	for i, op := range macroOperands {
 		if label == op {
-			label = fmt.Sprintf("#%d ", i+1)
+			label = fmt.Sprintf("#%d", i+1)
 		}
 		if operation == op {
-			operation = fmt.Sprintf("#%d ", i+1)
+			operation = fmt.Sprintf("#%d", i+1)
 		}
 
 		for i := range lineOperands {
 			if lineOperands[i] == op {
-				lineOperands[i] = fmt.Sprintf("#%d ", i+1)
+				lineOperands[i] = fmt.Sprintf("#%d", i+1)
 			}
 		}
 	}

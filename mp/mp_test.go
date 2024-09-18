@@ -17,11 +17,12 @@ func TestMacroDefine(t *testing.T) {
 	scanner := bufio.NewScanner(file)
 	scanner.Scan() // skips first MACRO line
 
-	goal := []string{" ADD #1 ", " #2 #1 ", " MACRO ", " TEST ", " ADD @2 ", " MEND "}
+	goal := []string{" ADD #(1,1) ", " #(1,2) #(1,1) ", " MACRO ", " TEST #(2,1) ", " ADD #(2,1) ", " MEND "}
 	mp.macroDefine(scanner)
 	macro := mp.macroDefinitiontable["M1"]
 	for i := range goal {
 		fmt.Println(macro.instructions[i], goal[i])
+		fmt.Println(goal[i], macro.instructions[i])
 		if macro.instructions[i] != goal[i] {
 			t.Fatalf("macro define is not working properly")
 		}

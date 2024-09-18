@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"saturn/mp"
 	"saturn/parser"
 	"saturn/shared"
 	"strconv"
@@ -53,8 +54,9 @@ func Run(filePath string) {
 	defer file.Close()
 
 	assembler := New()
+	macroProcessor := mp.New()
 
-	mp.macroPass(file)
+	macroProcessor.MacroPass(file)
 	assembler.firstPass(file)
 	assembler.secondPass(file)
 

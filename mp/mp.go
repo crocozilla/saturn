@@ -70,8 +70,7 @@ func (macroProcessor *macroProcessor) MacroPass(file *os.File) {
 
 		// write line to file:
 		for i := range operands {
-			operandsString += operands[i]
-			operandsString += " "
+			operandsString += operands[i] + " "
 		}
 		writtenLine := fmt.Sprintln(label, operationString, operandsString)
 		masmaprg.WriteString(writtenLine)
@@ -86,6 +85,7 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 	var macroOperands []string
 	isDefinition := true // first line after MACRO
 	definitionLevel := 1
+	parameterStack := [][2]string{}
 	for scanner.Scan() {
 		macroProcessor.lineCounter++
 
@@ -95,30 +95,50 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 		}
 
 		if isDefinition {
-			_, macroName, macroOperands = parser.MacroLine(line)
+			var currentName string
+			_, currentName, macroOperands = parser.MacroLine(line)
 			// what to do with label?
-
-			macro.numberOfParameters = len(macroOperands)
 
 			err := checkMacroOperands(macroOperands)
 			if err != nil {
 				panic(err)
 			}
+			parameterStack = addToStack(parameterStack, definitionLevel, macroOperands)
+
 			isDefinition = false
-			continue
+
+			if definitionLevel == 1 {
+				macroName = currentName
+				macro.numberOfParameters = len(macroOperands)
+				continue
+			}
+
 		}
 
 		label, operationString, lineOperands := parser.MacroLine(line)
-		label, operationString, lineOperands = substituteOperands(label, operationString, lineOperands, macroOperands)
-
 		if operationString == "MACRO" {
 			definitionLevel++
+			isDefinition = true
 
 		} else if operationString == "MEND" {
 			definitionLevel--
 			if definitionLevel == 0 {
 				macroProcessor.macroDefinitiontable[macroName] = macro
+				fmt.Println(parameterStack)
 				return
+			}
+		}
+
+		if code, valid := matchInStack(parameterStack, label); valid {
+			label = fmt.Sprintf("%v", code)
+		}
+		if code, valid := matchInStack(parameterStack, operationString); valid {
+			operationString = fmt.Sprintf("%v", code)
+		}
+
+		for i := range lineOperands {
+			if code, valid := matchInStack(parameterStack, lineOperands[i]); valid {
+				lineOperands[i] = fmt.Sprintf("%v", code)
 			}
 		}
 
@@ -142,6 +162,26 @@ func createMacroLine(label, operation string, operands []string) string {
 	return macroLine
 }
 
+func matchInStack(parameterStack [][2]string, token string) (replacement string, valid bool) {
+	name := 0
+	code := 1
+	// starts at the end to get closest scope
+	for i := len(parameterStack) - 1; i >= 0; i-- {
+		if parameterStack[i][name] == token {
+			return "#" + parameterStack[i][code], true
+		}
+	}
+
+	return "", false
+}
+
+func addToStack(parameterStack [][2]string, definitionLevel int, operands []string) (NewParameterStack [][2]string) {
+	for i, op := range operands {
+		parameterStack = append(parameterStack, [2]string{op, fmt.Sprintf("(%d,%d)", definitionLevel, i+1)})
+	}
+	return parameterStack
+}
+
 func checkMacroOperands(operands []string) error {
 	for _, op := range operands {
 		if op[0] != '&' {
@@ -149,26 +189,6 @@ func checkMacroOperands(operands []string) error {
 		}
 	}
 	return nil
-}
-
-func substituteOperands(label, operation string, lineOperands, macroOperands []string) (string, string, []string) {
-	for i, op := range macroOperands {
-		if label == op {
-			label = fmt.Sprintf("#%d", i+1)
-		}
-		if operation == op {
-			operation = fmt.Sprintf("#%d", i+1)
-		}
-
-		for i := range lineOperands {
-			if lineOperands[i] == op {
-				lineOperands[i] = fmt.Sprintf("#%d", i+1)
-			}
-		}
-	}
-
-	return label, operation, lineOperands
-
 }
 
 func (macroProcessor *macroProcessor) macroExpand(name string) {

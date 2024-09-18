@@ -3,8 +3,8 @@
  ADD &A
  &B  &A
  MACRO
- TEST
- ADD @2
+ TEST &A
+ ADD &A
  MEND
  MEND
 

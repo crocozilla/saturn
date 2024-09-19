@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"saturn/parser"
+	"slices"
 )
 
 /*
@@ -97,9 +98,11 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 
 		if isDefinition {
 			var currentName string
-			_, currentName, macroOperands = parser.MacroLine(line)
-			// what to do with label?
-
+			var operand0 string
+			operand0, currentName, macroOperands = parser.MacroLine(line)
+			if operand0 != "" {
+				macroOperands = slices.Insert(macroOperands, 0, operand0)
+			}
 			err := checkMacroOperands(macroOperands)
 			if err != nil {
 				panic(err)

@@ -67,6 +67,10 @@ func (macroProcessor *macroProcessor) MacroPass(file *os.File) {
 		if operationString == "MACRO" {
 			macroProcessor.macroDefine(scanner)
 			continue
+
+		} else if _, ok := macroProcessor.macroDefinitiontable[operationString]; ok {
+			macroProcessor.macroExpand(line, masmaprg)
+			continue
 		}
 
 		// write line to file:
@@ -132,18 +136,7 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 			}
 		}
 
-		if code, valid := matchInStack(parameterStack, label); valid {
-			label = fmt.Sprintf("%v", code)
-		}
-		if code, valid := matchInStack(parameterStack, operationString); valid {
-			operationString = fmt.Sprintf("%v", code)
-		}
-
-		for i := range lineOperands {
-			if code, valid := matchInStack(parameterStack, lineOperands[i]); valid {
-				lineOperands[i] = fmt.Sprintf("%v", code)
-			}
-		}
+		replaceTokens(parameterStack, &label, &operationString, lineOperands)
 
 		macroLine := createMacroLine(label, operationString, lineOperands)
 		macro.instructions = append(macro.instructions, macroLine)
@@ -175,7 +168,10 @@ func matchInStack(parameterStack [][2]string, token string) (replacement string,
 	// starts at the end to get closest scope
 	for i := len(parameterStack) - 1; i >= 0; i-- {
 		if parameterStack[i][name] == token {
-			return "#" + parameterStack[i][code], true
+			return parameterStack[i][code], true
+
+		} else if parameterStack[i][code] == token {
+			return parameterStack[i][name], true
 		}
 	}
 
@@ -184,13 +180,44 @@ func matchInStack(parameterStack [][2]string, token string) (replacement string,
 
 func addToStack(parameterStack [][2]string, definitionLevel int, operands []string) (NewParameterStack [][2]string) {
 	for i, op := range operands {
-		parameterStack = append(parameterStack, [2]string{op, fmt.Sprintf("(%d,%d)", definitionLevel, i+1)})
+		parameterStack = append(parameterStack, [2]string{op, fmt.Sprintf("#(%d,%d)", definitionLevel, i+1)})
 	}
 	return parameterStack
 }
 
+func replaceTokens(parameterStack [][2]string, label, operation *string, operands []string) {
+	if replacement, valid := matchInStack(parameterStack, *label); valid {
+		*label = fmt.Sprintf("%v", replacement)
+	}
+	if replacement, valid := matchInStack(parameterStack, *operation); valid {
+		*operation = fmt.Sprintf("%v", replacement)
+	}
+
+	for i := range operands {
+		if replacement, valid := matchInStack(parameterStack, operands[i]); valid {
+			operands[i] = fmt.Sprintf("%v", replacement)
+		}
+	}
+}
+
+func removeAmpersands(label, operation *string, operands []string) {
+	if len(*label) > 0 {
+		if (*label)[0] == '&' {
+			*label = (*label)[1:]
+		}
+	}
+	if (*operation)[0] == '&' {
+		*operation = (*operation)[1:]
+	}
+	for i := range operands {
+		if operands[i][0] == '&' {
+			operands[i] = operands[i][1:]
+		}
+	}
+}
+
 func deleteLevelFromStack(parameterStack [][2]string, definitionLevel int) [][2]string {
-	level := 1
+	level := 2
 
 	for i := len(parameterStack) - 1; i >= 0; i-- {
 		digit := int(parameterStack[i][1][level]) - '0'
@@ -215,6 +242,35 @@ func checkMacroOperands(operands []string) error {
 	return nil
 }
 
-func (macroProcessor *macroProcessor) macroExpand(name string) {
+func (macroProcessor *macroProcessor) macroExpand(line string, masmaprg *os.File) {
+	operand0, name, operands := parser.MacroLine(line)
+	macro := macroProcessor.macroDefinitiontable[name]
+	if operand0 != "" {
+		operands = slices.Insert(operands, 0, operand0)
+	}
+	if len(operands) > macro.numberOfParameters {
+		panic("um macro tem parametros demais")
+	}
 
+	parameterStack := [][2]string{}
+	parameterStack = addToStack(parameterStack, 1, operands)
+
+	// substitutes things like #1 #2 for arg1 arg2
+	for _, instructionLine := range macro.instructions {
+		label, operationString, operands := parser.MacroLine(instructionLine)
+		replaceTokens(parameterStack, &label, &operationString, operands)
+		removeAmpersands(&label, &operationString, operands)
+
+		macroLine := createMacroLine(label, operationString, operands)
+
+		if _, isMacro := macroProcessor.macroDefinitiontable[operationString]; isMacro {
+			macroProcessor.macroExpand(macroLine, masmaprg)
+			continue
+		}
+		if operationString == "MEND" {
+			return
+		}
+
+		masmaprg.WriteString(macroLine + "\n")
+	}
 }

@@ -73,3 +73,46 @@ func TestMacroDefine2(t *testing.T) {
 		}
 	}
 }
+
+func TestMacroExpand(t *testing.T) {
+	mp := New()
+	file, err := os.Open("macro_expand_test.asm")
+
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Scan()          // skips first MACRO line
+	mp.macroDefine(scanner) // defines C
+	mp.macroDefine(scanner) // defines A
+	mp.macroDefine(scanner) // defines B
+
+	write_file, err := os.Create("macro_expansion")
+	if err != nil {
+		panic(err)
+	}
+	defer write_file.Close()
+	defer os.Remove("macro_expansion")
+
+	mp.macroExpand(" B &TEST &&TEST2 ", write_file)
+	write_file.Seek(0, 0)
+	write_scanner := bufio.NewScanner(write_file)
+	goal := []string{}
+	goal = append(goal, " LOAD TEST ")
+	goal = append(goal, " ADD TEST2 ")
+	goal = append(goal, " ADD TEST2 ")
+	goal = append(goal, " SUB TEST2 ")
+	goal = append(goal, " SUB TEST2 ")
+
+	for i := 0; write_scanner.Scan(); i++ {
+		text := write_scanner.Text()
+		fmt.Println(text, goal[i])
+		if goal[i] != text {
+			t.Fatalf("erro em macro expand")
+		}
+
+	}
+
+}

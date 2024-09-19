@@ -62,6 +62,7 @@ func TestMacroDefine2(t *testing.T) {
 	goal = append(goal, "#(3,3) #(2,4) #(3,4) H ")
 	goal = append(goal, " MEND ")
 	goal = append(goal, "#(2,3) #(2,4) G H ")
+	goal = append(goal, " MEND ")
 	goal = append(goal, "E F G H ")
 	goal = append(goal, " MEND ")
 

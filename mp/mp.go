@@ -84,9 +84,10 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 	var macroName string
 	var macroOperands []string
 	isDefinition := true // first line after MACRO
+	quit := false
 	definitionLevel := 1
 	parameterStack := [][2]string{}
-	for scanner.Scan() {
+	for scanner.Scan() && !quit {
 		macroProcessor.lineCounter++
 
 		line, isComment := parser.ReadLine(scanner)
@@ -121,12 +122,10 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 			isDefinition = true
 
 		} else if operationString == "MEND" {
-			deleteLevelFromStack(parameterStack, definitionLevel)
+			parameterStack = deleteLevelFromStack(parameterStack, definitionLevel)
 			definitionLevel--
 			if definitionLevel == 0 {
-				macroProcessor.macroDefinitiontable[macroName] = macro
-				fmt.Println(parameterStack)
-				return
+				quit = true
 			}
 		}
 
@@ -148,7 +147,11 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 
 	}
 
-	panic("faltando diretiva MEND")
+	if quit {
+		macroProcessor.macroDefinitiontable[macroName] = macro
+	} else {
+		panic("faltando diretiva MEND")
+	}
 
 }
 
@@ -183,15 +186,21 @@ func addToStack(parameterStack [][2]string, definitionLevel int, operands []stri
 	return parameterStack
 }
 
-func deleteLevelFromStack(parameterStack [][2]string, definitionLevel int) {
-	level := 2
-	for i := len(parameterStack) - 1; getDigit(parameterStack[i][1][level]) == definitionLevel; i-- {
-		parameterStack = parameterStack[:len(parameterStack)-1]
-	}
-}
+func deleteLevelFromStack(parameterStack [][2]string, definitionLevel int) [][2]string {
+	level := 1
 
-func getDigit(character byte) int {
-	return int(character) - '0'
+	for i := len(parameterStack) - 1; i >= 0; i-- {
+		digit := int(parameterStack[i][1][level]) - '0'
+		fmt.Println(digit)
+		if digit == definitionLevel {
+			parameterStack = parameterStack[:len(parameterStack)-1]
+
+		} else {
+			return parameterStack
+		}
+	}
+
+	return [][2]string{}
 }
 
 func checkMacroOperands(operands []string) error {

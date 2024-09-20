@@ -121,7 +121,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			switch instruction {
 			case "START":
 				if op1 == EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução start"))
+					assembler.addError(errors.New("sintaxe (inválida) na pseudo instrução start"))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)

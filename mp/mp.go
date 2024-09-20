@@ -10,25 +10,6 @@ import (
 	"slices"
 )
 
-/*
- O processamento de macros deve ser realizado antes da montagem, sendo ativado a partir do
- módulo principal integrador do macro-montador.
-
- Deve permitir a definição de macro dentro de macros (macros aninhadas),
- bem como a chamada de macros dentro de macro (chamadas aninhadas), sendo,
- portanto, implementado em uma só passagem. O programa
- receberá como entrada um arquivo fonte informado para montagem e gerará como saída
- outro arquivo fonte com o nome  MASMAPRG.ASM.
-
- As macros são definidas através das pseudo-operações MACRO e MEND e a sintaxe
- está exemplificada no Anexo 2 por um programa que deverá ser
- utilizado para teste do Processador de Macros.
-
- Também deve ser prevista a opção de listagem das macros segundo formato a ser
- combinado com o professor. Esta listagem deverá também conter algumas estatísticas sobre
- o uso das macros.
-*/
-
 type macroInstructions []string
 type macro struct {
 	numberOfParameters int
@@ -36,7 +17,6 @@ type macro struct {
 }
 
 type macroProcessor struct {
-	lineCounter          uint16
 	macroDefinitiontable map[string]macro
 }
 
@@ -55,7 +35,6 @@ func (macroProcessor *macroProcessor) MacroPass(file *os.File) {
 	}
 
 	for scanner.Scan() {
-		macroProcessor.lineCounter++
 		line, isComment := parser.ReadLine(scanner)
 		if isComment {
 			continue
@@ -91,9 +70,9 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 	isDefinition := true // first line after MACRO
 	quit := false
 	definitionLevel := 1
+	isFirstDefinition := true
 	parameterStack := [][2]string{}
 	for scanner.Scan() && !quit {
-		macroProcessor.lineCounter++
 
 		line, isComment := parser.ReadLine(scanner)
 		if isComment {
@@ -115,9 +94,10 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 
 			isDefinition = false
 
-			if definitionLevel == 1 {
+			if isFirstDefinition {
 				macroName = currentName
 				macro.numberOfParameters = len(macroOperands)
+				isFirstDefinition = false
 				continue
 			}
 
@@ -136,7 +116,8 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 			}
 		}
 
-		replaceTokens(parameterStack, &label, &operationString, lineOperands)
+		tokensAreNames := true
+		replaceTokens(parameterStack, &label, &operationString, lineOperands, tokensAreNames)
 
 		macroLine := createMacroLine(label, operationString, lineOperands)
 		macro.instructions = append(macro.instructions, macroLine)
@@ -145,6 +126,77 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 
 	if quit {
 		macroProcessor.macroDefinitiontable[macroName] = macro
+	} else {
+		panic("faltando diretiva MEND")
+	}
+
+}
+
+func (macroProcessor *macroProcessor) macroDefineFromSlice(macroInstructions []string,
+	parameterStack [][2]string, initialDefinitionLevel int) int {
+
+	var macro macro
+	var macroName string
+	var macroOperands []string
+	isDefinition := true // first line after MACRO
+	isFirstDefinition := true
+	quit := false
+	definitionLevel := initialDefinitionLevel
+	idx := 0
+	var line string
+	for idx, line = range macroInstructions {
+
+		if quit {
+			break
+		}
+
+		if isDefinition {
+			var currentName string
+			var operand0 string
+			operand0, currentName, macroOperands = parser.MacroLine(line)
+			if operand0 != "" {
+				macroOperands = slices.Insert(macroOperands, 0, operand0)
+			}
+			// doesnt check if parameters start with & because our internal representation
+			// doesnt use &
+
+			parameterStack = addToStack(parameterStack, definitionLevel, macroOperands)
+
+			isDefinition = false
+
+			if isFirstDefinition {
+				macroName = currentName
+				macro.numberOfParameters = len(macroOperands)
+				isFirstDefinition = false
+				continue
+			}
+
+		}
+
+		label, operationString, lineOperands := parser.MacroLine(line)
+		if operationString == "MACRO" {
+			definitionLevel++
+			isDefinition = true
+
+		} else if operationString == "MEND" {
+			parameterStack = deleteLevelFromStack(parameterStack, definitionLevel)
+			definitionLevel--
+			if definitionLevel == initialDefinitionLevel-1 {
+				quit = true
+			}
+		}
+
+		tokensAreNames := false
+		replaceTokens(parameterStack, &label, &operationString, lineOperands, tokensAreNames)
+
+		macroLine := createMacroLine(label, operationString, lineOperands)
+		macro.instructions = append(macro.instructions, macroLine)
+
+	}
+
+	if quit {
+		macroProcessor.macroDefinitiontable[macroName] = macro
+		return idx
 	} else {
 		panic("faltando diretiva MEND")
 	}
@@ -162,16 +214,21 @@ func createMacroLine(label, operation string, operands []string) string {
 	return macroLine
 }
 
-func matchInStack(parameterStack [][2]string, token string) (replacement string, valid bool) {
+func matchInStack(parameterStack [][2]string, token string, tokensAreNames bool) (replacement string, valid bool) {
 	name := 0
 	code := 1
+	tokensAreCodes := !tokensAreNames
 	// starts at the end to get closest scope
 	for i := len(parameterStack) - 1; i >= 0; i-- {
-		if parameterStack[i][name] == token {
-			return parameterStack[i][code], true
+		if tokensAreNames {
+			if parameterStack[i][name] == token {
+				return parameterStack[i][code], true
+			}
 
-		} else if parameterStack[i][code] == token {
-			return parameterStack[i][name], true
+		} else if tokensAreCodes {
+			if parameterStack[i][code] == token {
+				return parameterStack[i][name], true
+			}
 		}
 	}
 
@@ -185,16 +242,17 @@ func addToStack(parameterStack [][2]string, definitionLevel int, operands []stri
 	return parameterStack
 }
 
-func replaceTokens(parameterStack [][2]string, label, operation *string, operands []string) {
-	if replacement, valid := matchInStack(parameterStack, *label); valid {
+// is name tells stack if we should sub ARG1 for #1 or vice versa
+func replaceTokens(parameterStack [][2]string, label, operation *string, operands []string, tokensAreNames bool) {
+	if replacement, valid := matchInStack(parameterStack, *label, tokensAreNames); valid {
 		*label = fmt.Sprintf("%v", replacement)
 	}
-	if replacement, valid := matchInStack(parameterStack, *operation); valid {
+	if replacement, valid := matchInStack(parameterStack, *operation, tokensAreNames); valid {
 		*operation = fmt.Sprintf("%v", replacement)
 	}
 
 	for i := range operands {
-		if replacement, valid := matchInStack(parameterStack, operands[i]); valid {
+		if replacement, valid := matchInStack(parameterStack, operands[i], tokensAreNames); valid {
 			operands[i] = fmt.Sprintf("%v", replacement)
 		}
 	}
@@ -256,15 +314,21 @@ func (macroProcessor *macroProcessor) macroExpand(line string, masmaprg *os.File
 	parameterStack = addToStack(parameterStack, 1, operands)
 
 	// substitutes things like #1 #2 for arg1 arg2
-	for _, instructionLine := range macro.instructions {
+	for idx := 0; idx < len(macro.instructions); idx++ {
+		instructionLine := macro.instructions[idx]
 		label, operationString, operands := parser.MacroLine(instructionLine)
-		replaceTokens(parameterStack, &label, &operationString, operands)
+		isName := false
+		replaceTokens(parameterStack, &label, &operationString, operands, isName)
 		removeAmpersands(&label, &operationString, operands)
 
 		macroLine := createMacroLine(label, operationString, operands)
 
 		if _, isMacro := macroProcessor.macroDefinitiontable[operationString]; isMacro {
 			macroProcessor.macroExpand(macroLine, masmaprg)
+			continue
+		}
+		if operationString == "MACRO" {
+			idx += macroProcessor.macroDefineFromSlice(macro.instructions[idx+1:], parameterStack, 2)
 			continue
 		}
 		if operationString == "MEND" {

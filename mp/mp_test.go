@@ -44,11 +44,11 @@ func TestMacroDefine2(t *testing.T) {
 	}
 
 	defer file.Close()
+	mp := New()
 	scanner := bufio.NewScanner(file)
 	scanner.Scan() // skips comment
 	scanner.Scan() // skips first MACRO line
 
-	mp := New()
 	mp.macroDefine(scanner)
 	macro := mp.macroDefinitiontable["P"]
 	goal := []string{}
@@ -96,7 +96,7 @@ func TestMacroExpand(t *testing.T) {
 	defer write_file.Close()
 	defer os.Remove("macro_expansion")
 
-	mp.macroExpand(" B &TEST &&TEST2 ", write_file)
+	mp.macroExpand(" B TEST TEST2 ", write_file)
 	write_file.Seek(0, 0)
 	write_scanner := bufio.NewScanner(write_file)
 	goal := []string{}
@@ -115,4 +115,15 @@ func TestMacroExpand(t *testing.T) {
 
 	}
 
+}
+
+func TestMacroPass(t *testing.T) {
+	mp := New()
+	file, err := os.Open("macro_pass_test.asm")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	mp.MacroPass(file)
 }

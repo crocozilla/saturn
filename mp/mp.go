@@ -255,14 +255,16 @@ func matchInStack(parameterStack [][2]string, token string, tokensAreNames bool)
 	name := 0
 	code := 1
 	tokensAreCodes := !tokensAreNames
-	// starts at the end to get closest scope
-	for i := len(parameterStack) - 1; i >= 0; i-- {
-		if tokensAreNames {
+
+	// for start at the end to get closest scope
+	if tokensAreNames {
+		for i := len(parameterStack) - 1; i >= 0; i-- {
 			if parameterStack[i][name] == token {
 				return parameterStack[i][code], true
 			}
-
-		} else if tokensAreCodes {
+		}
+	} else if tokensAreCodes {
+		for i := len(parameterStack) - 1; i >= 0; i-- {
 			if parameterStack[i][code] == token {
 				return parameterStack[i][name], true
 			}
@@ -276,11 +278,13 @@ func addToStack(parameterStack [][2]string, definitionLevel int, operands []stri
 	code := "#(1,1)"
 	codeLength := len(code)
 	for i, op := range operands {
+		// replaces temporary #(2,1) or #(3,1) by permanent #(1,1), if its the case
 		if len(op) == codeLength {
 			if op[:4] == fmt.Sprintf("#(%d,", definitionLevel) {
 				op = fmt.Sprintf("#(1,%v)", getDigit(op[4]))
 			}
 		}
+		//
 
 		parameterStack = append(parameterStack, [2]string{op, fmt.Sprintf("#(%d,%d)", definitionLevel, i+1)})
 	}

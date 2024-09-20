@@ -1,13 +1,13 @@
-package assembler
+package parser
 
-import(
-	"os"
+import (
 	"bufio"
-	"testing"
 	"fmt"
+	"os"
+	"testing"
 )
 
-func TestParseLine(t *testing.T){
+func TestParseLine(t *testing.T) {
 	file, err := os.Open("parse_line_test.asm")
 	if err != nil {
 		panic(err)
@@ -16,20 +16,20 @@ func TestParseLine(t *testing.T){
 
 	scanner := bufio.NewScanner(file)
 	i := 1
-	for scanner.Scan(){
+	for scanner.Scan() {
 		line := scanner.Text()
-		label, operation, op1, op2 := parseLine(line)
+		label, operation, op1, op2 := Line(line)
 		fmt.Println("line", i, ":")
-		if(label == ""){
+		if label == "" {
 			label = "empty"
 		}
-		if(operation == ""){
+		if operation == "" {
 			operation = "empty"
 		}
-		if(op1 == ""){
+		if op1 == "" {
 			op1 = "empty"
 		}
-		if(op2 == ""){
+		if op2 == "" {
 			op2 = "empty"
 		}
 		fmt.Println("  ", label, operation, op1, op2)

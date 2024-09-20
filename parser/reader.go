@@ -1,4 +1,4 @@
-package assembler
+package parser
 
 import (
 	"bufio"
@@ -64,7 +64,7 @@ func beginsComment(line string) bool {
 }
 
 // assumes line is not a comment, if something optional is missing, returns EMPTY string instead
-func parseLine(line string) (label string, operation string, op1 string, op2 string) {
+func Line(line string) (label string, operation string, op1 string, op2 string) {
 	label = getWord(line)
 
 	line = skipUntilNextWord(line)
@@ -90,7 +90,30 @@ func parseLine(line string) (label string, operation string, op1 string, op2 str
 	return label, operation, op1, op2
 }
 
-func readLine(scanner *bufio.Scanner) (line string, isComment bool) {
+func MacroLine(line string) (label string, operation string, operands []string) {
+	label = getWord(line)
+
+	line = skipUntilNextWord(line)
+	operation = getWord(line)
+
+	line = skipUntilNextWord(line)
+	if len(line) == 0 || beginsComment(line) {
+		return label, operation, []string{}
+	}
+
+	for {
+		op := getWord(line)
+		operands = append(operands, op)
+		line = skipUntilNextWord(line)
+		if len(line) == 0 || beginsComment(line) {
+			break
+		}
+	}
+
+	return label, operation, operands
+}
+
+func ReadLine(scanner *bufio.Scanner) (line string, isComment bool) {
 	line = scanner.Text()
 	if len(line) > 80 {
 		panic("linha muito longa. Não deve haver mais de 80 caracteres numa linha.")

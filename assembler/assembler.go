@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"saturn/mp"
+	"saturn/parser"
 	"saturn/shared"
 	"strconv"
 	"unicode"
@@ -14,6 +16,8 @@ const (
 	RELATIVE = 'R'
 	ABSOLUTE = 'A'
 )
+
+const EMPTY = ""
 
 type symbolInfo struct {
 	address uint16
@@ -50,7 +54,9 @@ func Run(filePath string) {
 	defer file.Close()
 
 	assembler := New()
+	macroProcessor := mp.New()
 
+	macroProcessor.MacroPass(file)
 	assembler.firstPass(file)
 	assembler.secondPass(file)
 
@@ -85,17 +91,21 @@ func getOpcode(token string) (shared.Operation, error) {
 }
 
 func (assembler *Assembler) firstPass(file *os.File) {
+
+	//rewind after macroPass
+	file.Seek(0, 0)
+
 	scanner := bufio.NewScanner(file)
 
 	for scanner.Scan() {
 		assembler.lineCounter++
-		line, isComment := readLine(scanner)
+		line, isComment := parser.ReadLine(scanner)
 		if isComment {
 			continue
 		}
 
 		// if operation is a pseudo-instruction, op2 is always EMPTY
-		label, operationString, op1, op2 := parseLine(line)
+		label, operationString, op1, op2 := parser.Line(line)
 		op1SymbolErr := validateSymbol(op1)
 
 		if _, ok := assembler.useTable[op1]; ok {
@@ -111,7 +121,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			switch instruction {
 			case "START":
 				if op1 == EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução start"))
+					assembler.addError(errors.New("sintaxe (inválida) na pseudo instrução start"))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
@@ -222,7 +232,7 @@ func (assembler *Assembler) secondPass(file *os.File) {
 		assembleLine := false
 		assembler.lineCounter++
 
-		line, isComment := readLine(scanner)
+		line, isComment := parser.ReadLine(scanner)
 		if isComment {
 			continue
 		}
@@ -231,7 +241,7 @@ func (assembler *Assembler) secondPass(file *os.File) {
 		op1Mode = zeroValuedByte
 		op2Mode = zeroValuedByte
 
-		_, operation, operand1, operand2 := parseLine(line)
+		_, operation, operand1, operand2 := parser.Line(line)
 
 		fmt.Printf("%s %s %s\n", operation, operand1, operand2)
 
@@ -269,7 +279,9 @@ func (assembler *Assembler) secondPass(file *os.File) {
 		assembler.addAddressModeToOpcode(&opCode, operand1, operand2)
 
 		if assembleLine {
-			assembler.assembleLine(objFile, lstFile, isPseudoInstruction, opCode, op1Value, op1Mode, op2Value, op2Mode)
+			assembler.assembleLine(
+				objFile, lstFile, isPseudoInstruction, opCode,
+				op1Value, op1Mode, op2Value, op2Mode)
 		}
 
 		assembler.locationCounter += opSize

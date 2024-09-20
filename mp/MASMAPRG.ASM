@@ -2,18 +2,18 @@
  READ A 
  READ B 
  READ C 
- LOAD #(2,1) 
- MULT #(2,2) 
+ LOAD A 
+ MULT C 
  SHIFTR 3 
- STORE #(2,3) 
- LOAD #(2,1) 
- MULT #(2,2) 
+ STORE TEMP1 
+ LOAD TEMP1 
+ MULT @4 
  SHIFTR 3 
- STORE #(2,3) 
- LOAD #(2,1) 
- MULT #(2,2) 
+ STORE TEMP1 
+ LOAD A 
+ MULT B 
  SHIFTR 3 
- STORE #(2,3) 
+ STORE TEMP2 
  SUB TEMP1 
  STORE D 
  WRITE D 

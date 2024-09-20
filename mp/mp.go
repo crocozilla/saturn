@@ -109,15 +109,14 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 			isDefinition = true
 
 		} else if operationString == "MEND" {
-			parameterStack = deleteLevelFromStack(parameterStack, definitionLevel)
+			parameterStack = popLevelFromStack(parameterStack)
 			definitionLevel--
 			if definitionLevel == 0 {
 				quit = true
 			}
 		}
 
-		tokensAreNames := true
-		replaceTokens(parameterStack, &label, &operationString, lineOperands, tokensAreNames)
+		replaceNamesByCodes(parameterStack, &label, &operationString, lineOperands)
 
 		macroLine := createMacroLine(label, operationString, lineOperands)
 		macro.instructions = append(macro.instructions, macroLine)
@@ -133,7 +132,7 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 }
 
 func (macroProcessor *macroProcessor) macroDefineFromSlice(macroInstructions []string,
-	parameterStack [][2]string, initialDefinitionLevel int) int {
+	parameterStack [][2]string) int {
 
 	var macro macro
 	var macroName string
@@ -141,6 +140,7 @@ func (macroProcessor *macroProcessor) macroDefineFromSlice(macroInstructions []s
 	isDefinition := true // first line after MACRO
 	isFirstDefinition := true
 	quit := false
+	initialDefinitionLevel := 2 // this function is only called when level is already 1
 	definitionLevel := initialDefinitionLevel
 	idx := 0
 	var line string
@@ -179,15 +179,14 @@ func (macroProcessor *macroProcessor) macroDefineFromSlice(macroInstructions []s
 			isDefinition = true
 
 		} else if operationString == "MEND" {
-			parameterStack = deleteLevelFromStack(parameterStack, definitionLevel)
+			parameterStack = popLevelFromStack(parameterStack)
 			definitionLevel--
 			if definitionLevel == initialDefinitionLevel-1 {
 				quit = true
 			}
 		}
 
-		tokensAreNames := false
-		replaceTokens(parameterStack, &label, &operationString, lineOperands, tokensAreNames)
+		replaceCodesByNames(parameterStack, &label, &operationString, lineOperands)
 
 		macroLine := createMacroLine(label, operationString, lineOperands)
 		macro.instructions = append(macro.instructions, macroLine)
@@ -201,6 +200,44 @@ func (macroProcessor *macroProcessor) macroDefineFromSlice(macroInstructions []s
 		panic("faltando diretiva MEND")
 	}
 
+}
+
+func (macroProcessor *macroProcessor) macroExpand(line string, masmaprg *os.File) {
+	operand0, name, operands := parser.MacroLine(line)
+	macro := macroProcessor.macroDefinitiontable[name]
+	if operand0 != "" {
+		operands = slices.Insert(operands, 0, operand0)
+	}
+	if len(operands) > macro.numberOfParameters {
+		panic("um macro tem parametros demais")
+	}
+
+	parameterStack := [][2]string{}
+	parameterStack = addToStack(parameterStack, 1, operands)
+
+	// substitutes things like #1 #2 for arg1 arg2
+	for idx := 0; idx < len(macro.instructions); idx++ {
+		instructionLine := macro.instructions[idx]
+		label, operationString, operands := parser.MacroLine(instructionLine)
+		replaceCodesByNames(parameterStack, &label, &operationString, operands)
+		removeAmpersands(&label, &operationString, operands)
+
+		macroLine := createMacroLine(label, operationString, operands)
+
+		if _, isMacro := macroProcessor.macroDefinitiontable[operationString]; isMacro {
+			macroProcessor.macroExpand(macroLine, masmaprg)
+			continue
+		}
+		if operationString == "MACRO" {
+			idx += macroProcessor.macroDefineFromSlice(macro.instructions[idx+1:], parameterStack)
+			continue
+		}
+		if operationString == "MEND" {
+			return
+		}
+
+		masmaprg.WriteString(macroLine + "\n")
+	}
 }
 
 func createMacroLine(label, operation string, operands []string) string {
@@ -236,13 +273,33 @@ func matchInStack(parameterStack [][2]string, token string, tokensAreNames bool)
 }
 
 func addToStack(parameterStack [][2]string, definitionLevel int, operands []string) (NewParameterStack [][2]string) {
+	code := "#(1,1)"
+	codeLength := len(code)
 	for i, op := range operands {
+		if len(op) == codeLength {
+			if op[:4] == fmt.Sprintf("#(%d,", definitionLevel) {
+				op = fmt.Sprintf("#(1,%v)", getDigit(op[4]))
+			}
+		}
+
 		parameterStack = append(parameterStack, [2]string{op, fmt.Sprintf("#(%d,%d)", definitionLevel, i+1)})
 	}
 	return parameterStack
 }
 
-// is name tells stack if we should sub ARG1 for #1 or vice versa
+// replaces #(1,1) #(1,2) for ARG1 ARG2
+func replaceCodesByNames(parameterStack [][2]string, label, operation *string, operands []string) {
+	tokensAreNames := false
+	replaceTokens(parameterStack, label, operation, operands, tokensAreNames)
+}
+
+// replaces ARG1 ARG2 for #(1,1) #(1,2)
+func replaceNamesByCodes(parameterStack [][2]string, label, operation *string, operands []string) {
+	tokensAreNames := true
+	replaceTokens(parameterStack, label, operation, operands, tokensAreNames)
+}
+
+// tokens are names tells stack if we should sub ARG1 for #1 or vice versa
 func replaceTokens(parameterStack [][2]string, label, operation *string, operands []string, tokensAreNames bool) {
 	if replacement, valid := matchInStack(parameterStack, *label, tokensAreNames); valid {
 		*label = fmt.Sprintf("%v", replacement)
@@ -274,12 +331,21 @@ func removeAmpersands(label, operation *string, operands []string) {
 	}
 }
 
-func deleteLevelFromStack(parameterStack [][2]string, definitionLevel int) [][2]string {
-	level := 2
+func getDigit(char byte) int {
+	return int(char) - '0'
+}
 
+// deletes parameters from latest scope
+func popLevelFromStack(parameterStack [][2]string) [][2]string {
+	code := 1
+	levelInString := 2
+	var definitionLevel int
+	if len(parameterStack) > 0 {
+		lastParameter := parameterStack[len(parameterStack)-1]
+		definitionLevel = getDigit(lastParameter[code][levelInString])
+	}
 	for i := len(parameterStack) - 1; i >= 0; i-- {
-		digit := int(parameterStack[i][1][level]) - '0'
-		fmt.Println(digit)
+		digit := getDigit(parameterStack[i][code][levelInString])
 		if digit == definitionLevel {
 			parameterStack = parameterStack[:len(parameterStack)-1]
 
@@ -298,43 +364,4 @@ func checkMacroOperands(operands []string) error {
 		}
 	}
 	return nil
-}
-
-func (macroProcessor *macroProcessor) macroExpand(line string, masmaprg *os.File) {
-	operand0, name, operands := parser.MacroLine(line)
-	macro := macroProcessor.macroDefinitiontable[name]
-	if operand0 != "" {
-		operands = slices.Insert(operands, 0, operand0)
-	}
-	if len(operands) > macro.numberOfParameters {
-		panic("um macro tem parametros demais")
-	}
-
-	parameterStack := [][2]string{}
-	parameterStack = addToStack(parameterStack, 1, operands)
-
-	// substitutes things like #1 #2 for arg1 arg2
-	for idx := 0; idx < len(macro.instructions); idx++ {
-		instructionLine := macro.instructions[idx]
-		label, operationString, operands := parser.MacroLine(instructionLine)
-		isName := false
-		replaceTokens(parameterStack, &label, &operationString, operands, isName)
-		removeAmpersands(&label, &operationString, operands)
-
-		macroLine := createMacroLine(label, operationString, operands)
-
-		if _, isMacro := macroProcessor.macroDefinitiontable[operationString]; isMacro {
-			macroProcessor.macroExpand(macroLine, masmaprg)
-			continue
-		}
-		if operationString == "MACRO" {
-			idx += macroProcessor.macroDefineFromSlice(macro.instructions[idx+1:], parameterStack, 2)
-			continue
-		}
-		if operationString == "MEND" {
-			return
-		}
-
-		masmaprg.WriteString(macroLine + "\n")
-	}
 }

@@ -56,11 +56,10 @@ func Run(filePath string) {
 	assembler := New()
 	macroProcessor := mp.New()
 
-	macroProcessor.MacroPass(file)
-	assembler.firstPass(file)
-	assembler.secondPass(file)
-
-	// to-do: assemble program
+	masmaprg := macroProcessor.MacroPass(file)
+	defer masmaprg.Close()
+	assembler.firstPass(masmaprg)
+	assembler.secondPass(masmaprg)
 }
 
 func getOpcode(token string) (shared.Operation, error) {

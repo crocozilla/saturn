@@ -26,7 +26,7 @@ func New() *macroProcessor {
 	return macroProcessor
 }
 
-func (macroProcessor *macroProcessor) MacroPass(file *os.File) {
+func (macroProcessor *macroProcessor) MacroPass(file *os.File) *os.File {
 	scanner := bufio.NewScanner(file)
 
 	masmaprg, err := os.Create("MASMAPRG.ASM")
@@ -59,6 +59,8 @@ func (macroProcessor *macroProcessor) MacroPass(file *os.File) {
 		writtenLine := fmt.Sprintln(label, operationString, operandsString)
 		masmaprg.WriteString(writtenLine)
 	}
+
+	return masmaprg
 }
 
 // gets the macro definition, starts after "MACRO" operation/instruction

@@ -41,7 +41,6 @@ func (macroProcessor *macroProcessor) MacroPass(file *os.File) *os.File {
 		}
 
 		label, operationString, operands := parser.MacroLine(line)
-		var operandsString string
 
 		if operationString == "MACRO" {
 			macroProcessor.macroDefine(scanner)
@@ -53,6 +52,7 @@ func (macroProcessor *macroProcessor) MacroPass(file *os.File) *os.File {
 		}
 
 		// write line to file:
+		var operandsString string
 		for i := range operands {
 			operandsString += operands[i] + " "
 		}
@@ -133,7 +133,8 @@ func (macroProcessor *macroProcessor) macroDefine(scanner *bufio.Scanner) {
 
 }
 
-func (macroProcessor *macroProcessor) macroDefineFromSlice(macroInstructions []string,
+func (macroProcessor *macroProcessor) macroDefineFromSlice(
+	macroInstructions []string,
 	parameterStack [][2]string) int {
 
 	var macro macro
@@ -253,7 +254,11 @@ func createMacroLine(label, operation string, operands []string) string {
 	return macroLine
 }
 
-func matchInStack(parameterStack [][2]string, token string, tokensAreNames bool) (replacement string, valid bool) {
+func matchInStack(
+	parameterStack [][2]string,
+	token string,
+	tokensAreNames bool) (replacement string, valid bool) {
+
 	name := 0
 	code := 1
 	tokensAreCodes := !tokensAreNames
@@ -276,7 +281,11 @@ func matchInStack(parameterStack [][2]string, token string, tokensAreNames bool)
 	return "", false
 }
 
-func addToStack(parameterStack [][2]string, definitionLevel int, operands []string) (NewParameterStack [][2]string) {
+func addToStack(
+	parameterStack [][2]string,
+	definitionLevel int,
+	operands []string) (NewParameterStack [][2]string) {
+
 	code := "#(1,1)"
 	codeLength := len(code)
 	for i, op := range operands {
@@ -288,7 +297,8 @@ func addToStack(parameterStack [][2]string, definitionLevel int, operands []stri
 		}
 		//
 
-		parameterStack = append(parameterStack, [2]string{op, fmt.Sprintf("#(%d,%d)", definitionLevel, i+1)})
+		parameter := [2]string{op, fmt.Sprintf("#(%d,%d)", definitionLevel, i+1)}
+		parameterStack = append(parameterStack, parameter)
 	}
 	return parameterStack
 }
@@ -306,7 +316,12 @@ func replaceNamesByCodes(parameterStack [][2]string, label, operation *string, o
 }
 
 // tokens are names tells stack if we should sub ARG1 for #1 or vice versa
-func replaceTokens(parameterStack [][2]string, label, operation *string, operands []string, tokensAreNames bool) {
+func replaceTokens(
+	parameterStack [][2]string,
+	label,
+	operation *string,
+	operands []string, tokensAreNames bool) {
+
 	if replacement, valid := matchInStack(parameterStack, *label, tokensAreNames); valid {
 		*label = fmt.Sprintf("%v", replacement)
 	}

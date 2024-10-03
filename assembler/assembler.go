@@ -40,9 +40,9 @@ func New() *Assembler {
 // writes to file program.txt as its output
 func Run(filePaths ...string) {
 
-	objFiles := []*os.File{}
 	definitionTables := []map[string]shared.SymbolInfo{}
 	useTables := []map[string][]uint16{}
+	programNames := []string{}
 	programSizes := []uint16{}
 
 	for _, filePath := range filePaths {
@@ -60,17 +60,17 @@ func Run(filePaths ...string) {
 
 		assembler.firstPass(masmaprg)
 
-		objFile, definitionTable,
-			useTable, programSize := assembler.secondPass(masmaprg)
+		definitionTable,
+			useTable, programName, programSize := assembler.secondPass(masmaprg)
 
-		objFiles = append(objFiles, objFile)
 		definitionTables = append(definitionTables, definitionTable)
 		useTables = append(useTables, useTable)
+		programNames = append(programNames, programName)
 		programSizes = append(programSizes, programSize)
 		fmt.Println(definitionTable, useTable, programSize)
 	}
 	//fmt.Printf("%d %d", 'A', 'R')
-	linker.Run(objFiles, definitionTables, useTables, programSizes)
+	linker.Run(definitionTables, useTables, programNames, programSizes)
 }
 
 func getOpcode(token string) (shared.Operation, error) {
@@ -232,7 +232,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 }
 
 func (assembler *Assembler) secondPass(file *os.File) (
-	*os.File, map[string]shared.SymbolInfo, map[string][]uint16, uint16) {
+	map[string]shared.SymbolInfo, map[string][]uint16, string, uint16) {
 	//fmt.Println(assembler.useTable)
 
 	// File rewind to origin and reset locationCount
@@ -253,6 +253,7 @@ func (assembler *Assembler) secondPass(file *os.File) (
 			panic(err)
 		}
 	}
+	defer objFile.Close()
 
 	lstFilePath := filepath.Join("build", assembler.programName+".lst")
 	lstFile, err := os.Create(lstFilePath)
@@ -264,6 +265,7 @@ func (assembler *Assembler) secondPass(file *os.File) (
 			panic(err)
 		}
 	}
+	defer objFile.Close()
 
 	scanner := bufio.NewScanner(file)
 	assembler.lineCounter = 0
@@ -336,9 +338,9 @@ func (assembler *Assembler) secondPass(file *os.File) (
 	assembler.writeErrorsToLst(lstFile)
 
 	// info linker needs
-	return objFile,
-		assembler.definitionTable,
+	return assembler.definitionTable,
 		assembler.useTable,
+		assembler.programName,
 		assembler.locationCounter
 }
 
@@ -421,7 +423,7 @@ func (assembler *Assembler) assembleLine(
 		objLine += op1String
 		lstLine += op1String
 	} else {
-		lstLine += padding
+		lstLine += padding + " "
 	}
 	if op2Mode != zeroValuedByte {
 		op2String := fmt.Sprintf("%02d %c ", op2Value, op2Mode)

@@ -1,17 +1,25 @@
 package linker
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"saturn/shared"
+	"strconv"
+	"strings"
 )
 
 func Run(
-	objFiles []*os.File,
 	definitionTables []map[string]shared.SymbolInfo,
 	useTables []map[string][]uint16,
+	programNames []string,
 	programSizes []uint16) {
+
+	if len(definitionTables) == 0 {
+		return
+	}
 
 	fmt.Println("")
 	fmt.Println("before: ")
@@ -48,7 +56,7 @@ func Run(
 		}
 		sizeOfPreviousPrograms += programSizes[i]
 	}
-	// conferir se todos os simbolos usados foram definidos
+	// check if all used symbols were defined
 	for _, useTable := range useTables {
 		for symbol := range useTable {
 			if _, defined := globalSymbolTable[symbol]; !defined {
@@ -60,5 +68,71 @@ func Run(
 	fmt.Println(globalSymbolTable)
 	for i := range programSizes {
 		fmt.Println(useTables[i], programSizes[i])
+	}
+
+	// create a function for this later (assembler does similar thing in pass2)
+	hpxFilePath := filepath.Join("build", programNames[0]+".hpx")
+	hpxFile, err := os.Create(hpxFilePath)
+	if err != nil {
+		// path is different depending if running main or test
+		hpxFilePath = filepath.Join("..", "build", programNames[0]+".hpx")
+		hpxFile, err = os.Create(hpxFilePath)
+		if err != nil {
+			panic(err)
+		}
+	}
+	defer hpxFile.Close()
+
+	var scanner *bufio.Scanner
+	locationCounter := 0
+	for program_idx, name := range programNames {
+		programFile, err := os.Open(filepath.Join("build", name+".obj"))
+		if err != nil {
+			programFile, err = os.Open(filepath.Join("..", "build", name+".obj"))
+			if err != nil {
+				panic(err)
+			}
+		}
+		scanner = bufio.NewScanner(programFile)
+		for scanner.Scan() {
+			lineFields := strings.Fields(scanner.Text())
+			var line string
+
+			for i := range lineFields {
+				if lineFields[i] == "00" {
+					// cant break bounds because of way obj files are created
+					if lineFields[i+1] == "A" {
+						for symbol, uses := range useTables[program_idx] {
+							for _, use := range uses {
+								if use == uint16(locationCounter) {
+									address := globalSymbolTable[symbol].Address
+									mode := globalSymbolTable[symbol].Mode
+									addressString := strconv.Itoa(int(address))
+									lineFields[i] = addressString
+									lineFields[i+1] = string(mode)
+								}
+							}
+						}
+					}
+				}
+				line += lineFields[i]
+				if lineFields[i] != "A" && lineFields[i] != "R" {
+					locationCounter++
+				}
+			}
+			var hpxLine string
+			for i := range lineFields {
+				if lineFields[i] != "A" && lineFields[i] != "R" {
+					hpxLine += lineFields[i]
+				}
+				if i+1 < len(lineFields) {
+					hpxLine += " "
+				} else {
+					hpxLine += "\n"
+				}
+			}
+			hpxFile.WriteString(hpxLine)
+		}
+
 	}
 }

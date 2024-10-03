@@ -30,8 +30,7 @@ func New() *macroProcessor {
 func (macroProcessor *macroProcessor) MacroPass(file *os.File) *os.File {
 	scanner := bufio.NewScanner(file)
 
-	buildPath := filepath.Join("..", "build")
-	masmaprgPath := filepath.Join(buildPath, "MASMAPRG.ASM")
+	masmaprgPath := filepath.Join("build", "MASMAPRG.ASM")
 	masmaprg, err := os.Create(masmaprgPath)
 	if err != nil {
 		panic(err)

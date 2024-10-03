@@ -5,9 +5,6 @@ import (
 	// "saturn/gui"
 )
 
-//TODO: código a ser executado deve ser guardado na maquina
-//TODO: leitura de arquivo txt para pegar o codigo
-
 //"saturn/gui"
 
 func main() {
@@ -15,5 +12,7 @@ func main() {
 	// gui.InsertProgram(program)
 	// gui.Run()
 
-	assembler.Run("assembler/assembler_copy_test.asm")
+	assembler.Run(
+		"assembler/linker_test.asm",
+		"assembler/linker_test_part2.asm")
 }

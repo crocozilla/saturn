@@ -14,11 +14,6 @@ import (
 	"unicode"
 )
 
-const (
-	RELATIVE = 'R'
-	ABSOLUTE = 'A'
-)
-
 const EMPTY = ""
 
 type ObjCode []string
@@ -45,6 +40,7 @@ func New() *Assembler {
 // writes to file program.txt as its output
 func Run(filePaths ...string) {
 
+	objFiles := []*os.File{}
 	definitionTables := []map[string]shared.SymbolInfo{}
 	useTables := []map[string][]uint16{}
 	programSizes := []uint16{}
@@ -64,14 +60,17 @@ func Run(filePaths ...string) {
 
 		assembler.firstPass(masmaprg)
 
-		definitionTable, useTable, programSize := assembler.secondPass(masmaprg)
+		objFile, definitionTable,
+			useTable, programSize := assembler.secondPass(masmaprg)
+
+		objFiles = append(objFiles, objFile)
 		definitionTables = append(definitionTables, definitionTable)
 		useTables = append(useTables, useTable)
-		// check if programSizes works correctly (debug)
 		programSizes = append(programSizes, programSize)
+		fmt.Println(definitionTable, useTable, programSize)
 	}
-	fmt.Println(definitionTables[0], useTables[0], programSizes[0])
-	linker.Run(definitionTables, useTables, programSizes)
+	//fmt.Printf("%d %d", 'A', 'R')
+	linker.Run(objFiles, definitionTables, useTables, programSizes)
 }
 
 func getOpcode(token string) (shared.Operation, error) {
@@ -107,6 +106,8 @@ func (assembler *Assembler) firstPass(file *os.File) {
 	file.Seek(0, 0)
 
 	scanner := bufio.NewScanner(file)
+	// remove after linker is done
+	fmt.Println("")
 
 	for scanner.Scan() {
 		assembler.lineCounter++
@@ -117,6 +118,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 
 		// if operation is a pseudo-instruction, op2 is always EMPTY
 		label, operationString, op1, op2 := parser.Line(line)
+		fmt.Println(line)
 		op1SymbolErr := validateSymbol(op1)
 
 		if _, ok := assembler.useTable[op1]; ok {
@@ -169,7 +171,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 					assembler.definitionTable[op1] =
 						shared.SymbolInfo{
 							Address: assembler.locationCounter,
-							Mode:    ABSOLUTE}
+							Mode:    shared.ABSOLUTE}
 				}
 			case "INTUSE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
@@ -230,7 +232,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 }
 
 func (assembler *Assembler) secondPass(file *os.File) (
-	map[string]shared.SymbolInfo, map[string][]uint16, uint16) {
+	*os.File, map[string]shared.SymbolInfo, map[string][]uint16, uint16) {
 	//fmt.Println(assembler.useTable)
 
 	// File rewind to origin and reset locationCount
@@ -244,13 +246,23 @@ func (assembler *Assembler) secondPass(file *os.File) (
 	objFilePath := filepath.Join("build", assembler.programName+".obj")
 	objFile, err := os.Create(objFilePath)
 	if err != nil {
-		panic(err)
+		// path is different depending if running main or assembler_test
+		objFilePath := filepath.Join("..", "build", assembler.programName+".obj")
+		objFile, err = os.Create(objFilePath)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	lstFilePath := filepath.Join("build", assembler.programName+".lst")
 	lstFile, err := os.Create(lstFilePath)
 	if err != nil {
-		panic(err)
+		// path is different depending if running main or assembler_test
+		lstFilePath = filepath.Join("..", "build", assembler.programName+".lst")
+		lstFile, err = os.Create(lstFilePath)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -276,7 +288,7 @@ func (assembler *Assembler) secondPass(file *os.File) (
 
 		_, operation, operand1, operand2 := parser.Line(line)
 
-		fmt.Printf("%s %s %s\n", operation, operand1, operand2)
+		//fmt.Printf("%s %s %s\n", operation, operand1, operand2)
 
 		opSize, isPseudoInstruction := pseudoOpSizes[operation]
 		if isPseudoInstruction {
@@ -324,7 +336,8 @@ func (assembler *Assembler) secondPass(file *os.File) (
 	assembler.writeErrorsToLst(lstFile)
 
 	// info linker needs
-	return assembler.definitionTable,
+	return objFile,
+		assembler.definitionTable,
 		assembler.useTable,
 		assembler.locationCounter
 }
@@ -586,9 +599,11 @@ func (assembler *Assembler) insertIntoProperTable(symbol string) {
 	// if its defined and it is its first use, set its address to current address
 	info, ok := assembler.definitionTable[symbol]
 	if ok && validateSymbol(symbol) == nil {
-		if info.Mode == ABSOLUTE {
+		if info.Mode == shared.ABSOLUTE {
 			assembler.definitionTable[symbol] =
-				shared.SymbolInfo{Address: assembler.locationCounter, Mode: RELATIVE}
+				shared.SymbolInfo{
+					Address: assembler.locationCounter,
+					Mode:    shared.RELATIVE}
 		}
 	}
 
@@ -598,5 +613,7 @@ func (assembler *Assembler) insertIntoProperTable(symbol string) {
 			errors.New("símbolo " + symbol + " com múltiplas definições."))
 	}
 	assembler.symbolTable[symbol] =
-		shared.SymbolInfo{Address: assembler.locationCounter, Mode: RELATIVE}
+		shared.SymbolInfo{
+			Address: assembler.locationCounter,
+			Mode:    shared.RELATIVE}
 }

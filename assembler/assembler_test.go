@@ -120,7 +120,7 @@ func TestFirstPass(t *testing.T) {
 	}
 
 	// definition table
-	label = "PROG"
+	label = "PROG2"
 	info, ok = assembler.definitionTable[label]
 	if !ok {
 		t.Fatalf("missing " + label + " in definition table")

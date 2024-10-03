@@ -28,6 +28,11 @@ const (
 	UNUSED
 )
 
+const (
+	RELATIVE = 'R'
+	ABSOLUTE = 'A'
+)
+
 type Instruction struct {
 	AddressMode AddressMode
 	Operation   Operation

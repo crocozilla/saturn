@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"saturn/linker"
 	"saturn/mp"
 	"saturn/parser"
 	"saturn/shared"
@@ -19,16 +21,11 @@ const (
 
 const EMPTY = ""
 
-type symbolInfo struct {
-	address uint16
-	mode    byte
-}
-
 type ObjCode []string
 
 type Assembler struct {
-	symbolTable     map[string]symbolInfo
-	definitionTable map[string]symbolInfo
+	symbolTable     map[string]shared.SymbolInfo
+	definitionTable map[string]shared.SymbolInfo
 	useTable        map[string][]uint16
 	locationCounter uint16
 	lineCounter     uint16
@@ -39,27 +36,41 @@ type Assembler struct {
 
 func New() *Assembler {
 	assembler := new(Assembler)
-	assembler.symbolTable = map[string]symbolInfo{}
-	assembler.definitionTable = map[string]symbolInfo{}
+	assembler.symbolTable = map[string]shared.SymbolInfo{}
+	assembler.definitionTable = map[string]shared.SymbolInfo{}
 	assembler.useTable = map[string][]uint16{}
 	return assembler
 }
 
 // writes to file program.txt as its output
-func Run(filePath string) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		panic(err)
+func Run(filePaths ...string) {
+
+	definitionTables := []map[string]shared.SymbolInfo{}
+	useTables := []map[string][]uint16{}
+	programSizes := []uint16{}
+
+	for _, filePath := range filePaths {
+		file, err := os.Open(filePath)
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+
+		assembler := New()
+		macroProcessor := mp.New()
+
+		masmaprg := macroProcessor.MacroPass(file)
+		defer masmaprg.Close()
+
+		assembler.firstPass(masmaprg)
+
+		definitionTable, useTable, programSize := assembler.secondPass(masmaprg)
+		definitionTables = append(definitionTables, definitionTable)
+		useTables = append(useTables, useTable)
+		programSizes = append(programSizes, programSize)
 	}
-	defer file.Close()
 
-	assembler := New()
-	macroProcessor := mp.New()
-
-	masmaprg := macroProcessor.MacroPass(file)
-	defer masmaprg.Close()
-	assembler.firstPass(masmaprg)
-	assembler.secondPass(masmaprg)
+	linker.Run(definitionTables, useTables, programSizes)
 }
 
 func getOpcode(token string) (shared.Operation, error) {
@@ -108,10 +119,12 @@ func (assembler *Assembler) firstPass(file *os.File) {
 		op1SymbolErr := validateSymbol(op1)
 
 		if _, ok := assembler.useTable[op1]; ok {
-			assembler.useTable[op1] = append(assembler.useTable[op1], assembler.locationCounter+1)
+			assembler.useTable[op1] = append(
+				assembler.useTable[op1], assembler.locationCounter+1)
 		}
 		if _, ok := assembler.useTable[op2]; ok {
-			assembler.useTable[op2] = append(assembler.useTable[op2], assembler.locationCounter+2)
+			assembler.useTable[op2] = append(
+				assembler.useTable[op2], assembler.locationCounter+2)
 		}
 
 		pseudoOpSize, isPseudoInstruction := pseudoOpSizes[operationString]
@@ -120,18 +133,21 @@ func (assembler *Assembler) firstPass(file *os.File) {
 			switch instruction {
 			case "START":
 				if op1 == EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe (inválida) na pseudo instrução start"))
+					assembler.addError(
+						errors.New("sintaxe (inválida) na pseudo instrução start"))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
 				}
 				if op1SymbolErr != nil {
-					assembler.addError(errors.New("nome do programa inválido na pseudo instrução start"))
+					assembler.addError(
+						errors.New("nome do programa inválido na pseudo instrução start"))
 				}
 				assembler.programName = op1
 			case "END":
 				if op1 != EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução end"))
+					assembler.addError(
+						errors.New("sintaxe inválida na pseudo instrução end"))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
@@ -139,7 +155,8 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				return
 			case "INTDEF":
 				if op1 == EMPTY || op2 != EMPTY {
-					assembler.addError(errors.New("sintaxe inválida na pseudo instrução intdef"))
+					assembler.addError(
+						errors.New("sintaxe inválida na pseudo instrução intdef"))
 				}
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
@@ -147,7 +164,10 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if op1SymbolErr == nil {
 					// if a symbol is defined using intdef, it should be relocated from the symbolTable
 					delete(assembler.symbolTable, op1)
-					assembler.definitionTable[op1] = symbolInfo{assembler.locationCounter, ABSOLUTE}
+					assembler.definitionTable[op1] =
+						shared.SymbolInfo{
+							Address: assembler.locationCounter,
+							Mode:    ABSOLUTE}
 				}
 			case "INTUSE":
 				if label == EMPTY || op1 != EMPTY || op2 != EMPTY {
@@ -201,8 +221,10 @@ func (assembler *Assembler) firstPass(file *os.File) {
 
 }
 
-func (assembler *Assembler) secondPass(file *os.File) {
-	fmt.Println(assembler.useTable)
+func (assembler *Assembler) secondPass(file *os.File) (
+	map[string]shared.SymbolInfo, map[string][]uint16, uint16) {
+	//fmt.Println(assembler.useTable)
+
 	// File rewind to origin and reset locationCount
 	file.Seek(0, 0)
 	assembler.locationCounter = 0
@@ -210,11 +232,17 @@ func (assembler *Assembler) secondPass(file *os.File) {
 	if assembler.programName == EMPTY {
 		assembler.addError(errors.New("programa sem nome"))
 	}
-	objFile, err := os.Create(assembler.programName + ".obj")
+
+	buildPath := filepath.Join("..", "build")
+
+	objFilePath := filepath.Join(buildPath, assembler.programName+".obj")
+	objFile, err := os.Create(objFilePath)
 	if err != nil {
 		panic(err)
 	}
-	lstFile, err := os.Create(assembler.programName + ".lst")
+
+	lstFilePath := filepath.Join(buildPath, assembler.programName+".lst")
+	lstFile, err := os.Create(lstFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -288,6 +316,11 @@ func (assembler *Assembler) secondPass(file *os.File) {
 	}
 
 	assembler.writeErrorsToLst(lstFile)
+
+	// info linker needs
+	return assembler.definitionTable,
+		assembler.useTable,
+		assembler.locationCounter
 }
 
 func (assembler *Assembler) addError(err error) {
@@ -312,7 +345,8 @@ func (assembler *Assembler) writeErrorsToLst(lstFile *os.File) {
 	}
 }
 
-func (assembler *Assembler) addAddressModeToOpcode(opCode *shared.Operation, operand1 string, operand2 string) {
+func (assembler *Assembler) addAddressModeToOpcode(
+	opCode *shared.Operation, operand1 string, operand2 string) {
 	if operand1 != EMPTY {
 		op1AddressMode, err := getAddressMode(operand1)
 		if err != nil {
@@ -435,7 +469,8 @@ func getOperandValue(operand string) (shared.Word, error) {
 }
 
 // assumes operand is not empty
-func (assembler *Assembler) getOperandValueAndMode(operand string) (value shared.Word, mode byte) {
+func (assembler *Assembler) getOperandValueAndMode(operand string) (
+	value shared.Word, mode byte) {
 	if err := validateSymbol(operand); err == nil {
 		// Is a label
 		infoSym, okSym := assembler.symbolTable[operand]
@@ -449,15 +484,15 @@ func (assembler *Assembler) getOperandValueAndMode(operand string) (value shared
 		// }
 
 		if okSym {
-			value = shared.Word(infoSym.address)
-			mode = infoSym.mode
+			value = shared.Word(infoSym.Address)
+			mode = infoSym.Mode
 		} else if okUse {
 			// ?
 			value = 0
 			mode = 'A'
 		} else if okDef {
-			value = shared.Word(infoDef.address)
-			mode = infoDef.mode
+			value = shared.Word(infoDef.Address)
+			mode = infoDef.Mode
 		}
 	} else {
 		// Is a number
@@ -487,18 +522,24 @@ func removeAddressMode(operand string) (string, error) {
 
 func getAddressMode(operand string) (shared.AddressMode, error) {
 	if operand == EMPTY {
-		return shared.DIRECT, errors.New("operando vazio em getAddressMode")
+		return shared.DIRECT,
+			errors.New("operando vazio em getAddressMode")
 	}
-	if operand[0] == '#' && len(operand) > 1 && operand[len(operand)-1] == 'I' {
-		return shared.DIRECT, errors.New("operando com múltiplos endereçamentos em getAddressMode")
+	if operand[0] == '#' && len(operand) > 1 &&
+		operand[len(operand)-1] == 'I' {
+		return shared.DIRECT,
+			errors.New("operando com múltiplos endereçamentos em getAddressMode")
 	}
 	// 									 note the "!="
-	if len(operand) > 2 && operand[len(operand)-2] != ',' && operand[len(operand)-1] == 'I' {
-		return shared.DIRECT, errors.New("operando indireto inválido")
+	if len(operand) > 2 && operand[len(operand)-2] != ',' &&
+		operand[len(operand)-1] == 'I' {
+		return shared.DIRECT,
+			errors.New("operando indireto inválido")
 	}
 	if operand[0] == '#' && len(operand) > 1 {
 		return shared.IMMEDIATE, nil
-	} else if len(operand) > 2 && operand[len(operand)-2] == ',' && operand[len(operand)-1] == 'I' {
+	} else if len(operand) > 2 &&
+		operand[len(operand)-2] == ',' && operand[len(operand)-1] == 'I' {
 		return shared.INDIRECT, nil
 	}
 
@@ -536,8 +577,9 @@ func (assembler *Assembler) insertIntoProperTable(symbol string) {
 	// if its defined and it is its first use, set its address to current address
 	info, ok := assembler.definitionTable[symbol]
 	if ok && validateSymbol(symbol) == nil {
-		if info.mode == ABSOLUTE {
-			assembler.definitionTable[symbol] = symbolInfo{assembler.locationCounter, RELATIVE}
+		if info.Mode == ABSOLUTE {
+			assembler.definitionTable[symbol] =
+				shared.SymbolInfo{Address: assembler.locationCounter, Mode: RELATIVE}
 		}
 	}
 
@@ -545,5 +587,6 @@ func (assembler *Assembler) insertIntoProperTable(symbol string) {
 	if ok {
 		assembler.addError(errors.New("símbolo " + symbol + " com múltiplas definições."))
 	}
-	assembler.symbolTable[symbol] = symbolInfo{assembler.locationCounter, RELATIVE}
+	assembler.symbolTable[symbol] =
+		shared.SymbolInfo{Address: assembler.locationCounter, Mode: RELATIVE}
 }

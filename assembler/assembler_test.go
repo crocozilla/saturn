@@ -27,7 +27,7 @@ func TestFirstPass(t *testing.T) {
 		t.Fatalf("missing " + label + " in symbol table")
 
 	}
-	if info.address != 0 {
+	if info.Address != 0 {
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -42,7 +42,7 @@ func TestFirstPass(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing " + label + " in definition table")
 	}
-	if info.address != 0 {
+	if info.Address != 0 {
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -52,7 +52,7 @@ func TestFirstPass(t *testing.T) {
 		t.Fatalf("missing " + label + " in definition table")
 
 	}
-	if info.address != 6 {
+	if info.Address != 6 {
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -62,7 +62,7 @@ func TestFirstPass(t *testing.T) {
 		t.Fatalf("missing " + label + " in definition table")
 
 	}
-	if info.address != 7 {
+	if info.Address != 7 {
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -106,7 +106,7 @@ func TestFirstPass(t *testing.T) {
 		t.Fatalf("missing " + label + " in symbol table")
 
 	}
-	if info.address != 14 {
+	if info.Address != 14 {
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -115,7 +115,7 @@ func TestFirstPass(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing " + label + " in symbol table")
 	}
-	if info.address != 12 {
+	if info.Address != 12 {
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -125,7 +125,7 @@ func TestFirstPass(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing " + label + " in definition table")
 	}
-	if info.address != 0 {
+	if info.Address != 0 {
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -134,7 +134,7 @@ func TestFirstPass(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing " + label + " in definition table")
 	}
-	if info.address != 13 {
+	if info.Address != 13 {
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -143,8 +143,8 @@ func TestFirstPass(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing " + label + " in definition table")
 	}
-	if info.address != 7 {
-		fmt.Println(info.address)
+	if info.Address != 7 {
+		fmt.Println(info.Address)
 		t.Fatalf("incorrect address on label " + label)
 	}
 
@@ -153,7 +153,7 @@ func TestFirstPass(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing " + label + " in definition table")
 	}
-	if info.address != 0 {
+	if info.Address != 0 {
 		t.Fatalf("incorrect address on label " + label)
 	}
 

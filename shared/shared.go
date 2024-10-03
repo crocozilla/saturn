@@ -12,6 +12,11 @@ type BinProgram []BinInstruction
 
 type AddressMode uint8
 
+type SymbolInfo struct {
+	Address uint16
+	Mode    byte
+}
+
 const (
 	DIRECT AddressMode = iota
 	INDIRECT

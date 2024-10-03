@@ -32,20 +32,30 @@ func Run(
 		// copy definition tables to global symbol table
 		// with correct global address
 		definitionTable := definitionTables[i]
-		for key, value := range definitionTable {
-
-			globalAddress := value.Address
-			if value.Mode == shared.RELATIVE {
-				globalAddress += sizeOfPreviousPrograms
-			}
-			if _, ok := globalSymbolTable[key]; ok {
+		for symbol, info := range definitionTable {
+			if _, ok := globalSymbolTable[symbol]; ok {
 				panic(errors.New("símbolo global já definido"))
 			}
-			globalSymbolTable[key] = value
+
+			globalAddress := info.Address
+			if info.Mode == shared.RELATIVE {
+				globalAddress += sizeOfPreviousPrograms
+			}
+
+			globalSymbolTable[symbol] = shared.SymbolInfo{
+				Address: globalAddress,
+				Mode:    info.Mode}
 		}
 		sizeOfPreviousPrograms += programSizes[i]
 	}
-
+	// conferir se todos os simbolos usados foram definidos
+	for _, useTable := range useTables {
+		for symbol := range useTable {
+			if _, defined := globalSymbolTable[symbol]; !defined {
+				panic(errors.New("simbolo " + symbol + " nao foi definido"))
+			}
+		}
+	}
 	fmt.Println("after:")
 	fmt.Println(globalSymbolTable)
 	for i := range programSizes {

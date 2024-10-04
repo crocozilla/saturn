@@ -34,7 +34,7 @@ func Run(
 	}
 
 	// second pass here
-	secondPass(useTables, programNames, globalSymbolTable)
+	secondPass(useTables, programNames, programSizes, globalSymbolTable)
 
 }
 
@@ -88,6 +88,7 @@ func firstPass(
 func secondPass(
 	useTables []map[string][]uint16,
 	programNames []string,
+	programSizes []uint16,
 	globalSymbolTable map[string]shared.SymbolInfo) {
 
 	hpxFile, err := shared.CreateBuildFile(programNames[0] + ".hpx")
@@ -98,6 +99,7 @@ func secondPass(
 
 	var scanner *bufio.Scanner
 	locationCounter := 0
+	sizeOfPreviousPrograms := uint16(0)
 	for program_idx, name := range programNames {
 		programFile, err := shared.OpenBuildFile(name + ".obj")
 		if err != nil {
@@ -109,9 +111,11 @@ func secondPass(
 			updateLineFieldsAddresses(lineFields,
 				globalSymbolTable,
 				useTables[program_idx],
-				&locationCounter)
+				&locationCounter,
+				sizeOfPreviousPrograms)
 			writeHpxLine(hpxFile, lineFields)
 		}
+		sizeOfPreviousPrograms += programSizes[program_idx]
 
 	}
 }
@@ -137,7 +141,8 @@ func updateLineFieldsAddresses(
 	lineFields []string,
 	globalSymbolTable map[string]shared.SymbolInfo,
 	useTable map[string][]uint16,
-	locationCounter *int) {
+	locationCounter *int,
+	sizeOfPreviousPrograms uint16) {
 	for i := range lineFields {
 		// 00 A is sentinel value for INTDEF/INTUSE? value
 		if lineFields[i] == "00" {
@@ -156,6 +161,11 @@ func updateLineFieldsAddresses(
 					}
 				}
 			}
+		}
+		if lineFields[i] == "R" {
+			fieldValue, _ := strconv.Atoi(lineFields[i-1])
+			fieldValue += int(sizeOfPreviousPrograms)
+			lineFields[i-1] = strconv.Itoa(fieldValue)
 		}
 		if lineFields[i] != "A" && lineFields[i] != "R" {
 			(*locationCounter)++

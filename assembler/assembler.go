@@ -13,7 +13,10 @@ import (
 	"unicode"
 )
 
-const EMPTY = ""
+const (
+	EMPTY = ""
+	SPACE = -1
+)
 
 type ObjCode []string
 
@@ -287,6 +290,10 @@ func (assembler *Assembler) secondPass(file *os.File) (
 					op1Value, op1Mode = assembler.getOperandValueAndMode(operand1)
 				}
 				assembleLine = true
+			case "SPACE":
+				opCode = SPACE
+				op1Mode = shared.ABSOLUTE
+				assembleLine = true
 			default:
 				assembleLine = false
 			}
@@ -406,7 +413,12 @@ func (assembler *Assembler) assembleLine(
 	}
 
 	if op1Mode != zeroValuedByte {
-		op1String := fmt.Sprintf("%02d %c ", op1Value, op1Mode)
+		var op1String string
+		if opCode == SPACE {
+			op1String = "XX A "
+		} else {
+			op1String = fmt.Sprintf("%02d %c ", op1Value, op1Mode)
+		}
 		objLine += op1String
 		lstLine += op1String
 	} else {

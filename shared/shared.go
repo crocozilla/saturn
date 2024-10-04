@@ -1,9 +1,11 @@
 package shared
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Word int16
@@ -144,23 +146,50 @@ func (i Instruction) String() string {
 }
 
 func CreateBuildFile(fileName string) (*os.File, error) {
-	path := filepath.Join("build", fileName)
-	file, err := os.Create(path)
-	if err != nil {
-		// path is different depending if running main or test
-		path = filepath.Join("..", "build", fileName)
-		file, err = os.Create(path)
+	// if is test
+	if strings.HasSuffix(os.Args[0], ".test") {
+		buildPath := filepath.Join("..", "build")
+		exists := directoryExists(buildPath)
+		if !exists {
+			os.MkdirAll(buildPath, 0777)
+		}
+		path := filepath.Join(buildPath, fileName)
+		file, err := os.Create(path)
+		return file, err
+	} else {
+		exists := directoryExists("build")
+		if !exists {
+			os.MkdirAll("build", 0777)
+		}
+		file, err := os.Create(filepath.Join("build", fileName))
+		return file, err
 	}
-	return file, err
 }
 
 func OpenBuildFile(fileName string) (*os.File, error) {
-	path := filepath.Join("build", fileName)
-	file, err := os.Open(path)
-	if err != nil {
-		// path is different depending if running main or test
-		path = filepath.Join("..", "build", fileName)
-		file, err = os.Open(path)
+	// if is test
+	if strings.HasSuffix(os.Args[0], ".test") {
+		buildPath := filepath.Join("..", "build")
+		path := filepath.Join(buildPath, fileName)
+		file, err := os.Open(path)
+		return file, err
+
+	} else {
+		file, err := os.Open(filepath.Join("build", fileName))
+		return file, err
 	}
-	return file, err
+}
+
+// exists returns whether the given directory exists
+// panics on wrong kind of error
+func directoryExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false
+	} else {
+		panic(err)
+	}
 }

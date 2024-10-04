@@ -1,4 +1,1 @@
-*.lst
-*.obj
-*.hpx
-MASMAPRG.ASM
+build

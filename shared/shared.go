@@ -1,6 +1,10 @@
 package shared
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
 
 type Word int16
 
@@ -137,4 +141,26 @@ func ExtractOpCode(operation Word) Operation {
 
 func (i Instruction) String() string {
 	return fmt.Sprintf("%d<(%d) [%d, %d]>", i.AddressMode, i.Operation, i.Operands.First, i.Operands.Second)
+}
+
+func CreateBuildFile(fileName string) (*os.File, error) {
+	path := filepath.Join("build", fileName)
+	file, err := os.Create(path)
+	if err != nil {
+		// path is different depending if running main or test
+		path = filepath.Join("..", "build", fileName)
+		file, err = os.Create(path)
+	}
+	return file, err
+}
+
+func OpenBuildFile(fileName string) (*os.File, error) {
+	path := filepath.Join("build", fileName)
+	file, err := os.Open(path)
+	if err != nil {
+		// path is different depending if running main or test
+		path = filepath.Join("..", "build", fileName)
+		file, err = os.Open(path)
+	}
+	return file, err
 }

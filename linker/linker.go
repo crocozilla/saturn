@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"saturn/shared"
 	"strconv"
 	"strings"
@@ -70,28 +68,18 @@ func Run(
 		fmt.Println(useTables[i], programSizes[i])
 	}
 
-	// create a function for this later (assembler does similar thing in pass2)
-	hpxFilePath := filepath.Join("build", programNames[0]+".hpx")
-	hpxFile, err := os.Create(hpxFilePath)
+	hpxFile, err := shared.CreateBuildFile(programNames[0] + ".hpx")
 	if err != nil {
-		// path is different depending if running main or test
-		hpxFilePath = filepath.Join("..", "build", programNames[0]+".hpx")
-		hpxFile, err = os.Create(hpxFilePath)
-		if err != nil {
-			panic(err)
-		}
+		panic(err)
 	}
 	defer hpxFile.Close()
 
 	var scanner *bufio.Scanner
 	locationCounter := 0
 	for program_idx, name := range programNames {
-		programFile, err := os.Open(filepath.Join("build", name+".obj"))
+		programFile, err := shared.OpenBuildFile(name + ".obj")
 		if err != nil {
-			programFile, err = os.Open(filepath.Join("..", "build", name+".obj"))
-			if err != nil {
-				panic(err)
-			}
+			panic(err)
 		}
 		scanner = bufio.NewScanner(programFile)
 		for scanner.Scan() {

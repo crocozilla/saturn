@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"saturn/parser"
+	"saturn/shared"
 	"slices"
 )
 
@@ -30,8 +30,7 @@ func New() *macroProcessor {
 func (macroProcessor *macroProcessor) MacroPass(file *os.File) *os.File {
 	scanner := bufio.NewScanner(file)
 
-	masmaprgPath := filepath.Join("build", "MASMAPRG.ASM")
-	masmaprg, err := os.Create(masmaprgPath)
+	masmaprg, err := shared.CreateBuildFile("MASMAPRG.ASM")
 	if err != nil {
 		panic(err)
 	}

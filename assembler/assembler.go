@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"saturn/linker"
 	"saturn/mp"
 	"saturn/parser"
@@ -243,29 +242,17 @@ func (assembler *Assembler) secondPass(file *os.File) (
 		assembler.addError(errors.New("programa sem nome"))
 	}
 
-	objFilePath := filepath.Join("build", assembler.programName+".obj")
-	objFile, err := os.Create(objFilePath)
+	objFile, err := shared.CreateBuildFile(assembler.programName + ".obj")
 	if err != nil {
-		// path is different depending if running main or assembler_test
-		objFilePath := filepath.Join("..", "build", assembler.programName+".obj")
-		objFile, err = os.Create(objFilePath)
-		if err != nil {
-			panic(err)
-		}
+		panic(err)
 	}
 	defer objFile.Close()
 
-	lstFilePath := filepath.Join("build", assembler.programName+".lst")
-	lstFile, err := os.Create(lstFilePath)
+	lstFile, err := shared.CreateBuildFile(assembler.programName + ".lst")
 	if err != nil {
-		// path is different depending if running main or assembler_test
-		lstFilePath = filepath.Join("..", "build", assembler.programName+".lst")
-		lstFile, err = os.Create(lstFilePath)
-		if err != nil {
-			panic(err)
-		}
+		panic(err)
 	}
-	defer objFile.Close()
+	defer lstFile.Close()
 
 	scanner := bufio.NewScanner(file)
 	assembler.lineCounter = 0

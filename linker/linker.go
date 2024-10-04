@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"os"
 	"saturn/shared"
 	"strconv"
 	"strings"
@@ -24,6 +25,24 @@ func Run(
 	for i := range programSizes {
 		fmt.Println(definitionTables[i], useTables[i], programSizes[i])
 	}
+	globalSymbolTable := firstPass(definitionTables, useTables, programSizes)
+
+	fmt.Println("after:")
+	fmt.Println(globalSymbolTable)
+	for i := range programSizes {
+		fmt.Println(useTables[i], programSizes[i])
+	}
+
+	// second pass here
+	secondPass(useTables, programNames, globalSymbolTable)
+
+}
+
+func firstPass(
+	definitionTables []map[string]shared.SymbolInfo,
+	useTables []map[string][]uint16,
+	programSizes []uint16) map[string]shared.SymbolInfo {
+
 	globalSymbolTable := map[string]shared.SymbolInfo{}
 	sizeOfPreviousPrograms := uint16(0)
 	for i := range programSizes {
@@ -62,11 +81,14 @@ func Run(
 			}
 		}
 	}
-	fmt.Println("after:")
-	fmt.Println(globalSymbolTable)
-	for i := range programSizes {
-		fmt.Println(useTables[i], programSizes[i])
-	}
+
+	return globalSymbolTable
+}
+
+func secondPass(
+	useTables []map[string][]uint16,
+	programNames []string,
+	globalSymbolTable map[string]shared.SymbolInfo) {
 
 	hpxFile, err := shared.CreateBuildFile(programNames[0] + ".hpx")
 	if err != nil {
@@ -84,43 +106,59 @@ func Run(
 		scanner = bufio.NewScanner(programFile)
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
-			var line string
+			updateLineFieldsAddresses(lineFields,
+				globalSymbolTable,
+				useTables[program_idx],
+				&locationCounter)
+			writeHpxLine(hpxFile, lineFields)
+		}
 
-			for i := range lineFields {
-				if lineFields[i] == "00" {
-					// cant break bounds because of way obj files are created
-					if lineFields[i+1] == "A" {
-						for symbol, uses := range useTables[program_idx] {
-							for _, use := range uses {
-								if use == uint16(locationCounter) {
-									address := globalSymbolTable[symbol].Address
-									mode := globalSymbolTable[symbol].Mode
-									addressString := strconv.Itoa(int(address))
-									lineFields[i] = addressString
-									lineFields[i+1] = string(mode)
-								}
-							}
+	}
+}
+
+func writeHpxLine(hpxFile *os.File, lineFields []string) {
+	var hpxLine string
+	for i := range lineFields {
+		if lineFields[i] != "A" && lineFields[i] != "R" {
+			hpxLine += lineFields[i]
+		}
+		if i+1 < len(lineFields) {
+			hpxLine += " "
+		} else {
+			hpxLine += "\n"
+		}
+	}
+	hpxFile.WriteString(hpxLine)
+}
+
+// updates external addresses (00 A) to actual addresses
+// updates locationCounter
+func updateLineFieldsAddresses(
+	lineFields []string,
+	globalSymbolTable map[string]shared.SymbolInfo,
+	useTable map[string][]uint16,
+	locationCounter *int) {
+	for i := range lineFields {
+		// 00 A is sentinel value for INTDEF/INTUSE? value
+		if lineFields[i] == "00" {
+			// cant break bounds because of way obj files are created
+			if lineFields[i+1] == "A" {
+				for symbol, useAddresses := range useTable {
+					for _, useAddress := range useAddresses {
+						if useAddress == uint16(*locationCounter) {
+							address := strconv.Itoa(
+								int(globalSymbolTable[symbol].Address))
+							mode := string(globalSymbolTable[symbol].Mode)
+
+							lineFields[i] = address
+							lineFields[i+1] = mode
 						}
 					}
 				}
-				line += lineFields[i]
-				if lineFields[i] != "A" && lineFields[i] != "R" {
-					locationCounter++
-				}
 			}
-			var hpxLine string
-			for i := range lineFields {
-				if lineFields[i] != "A" && lineFields[i] != "R" {
-					hpxLine += lineFields[i]
-				}
-				if i+1 < len(lineFields) {
-					hpxLine += " "
-				} else {
-					hpxLine += "\n"
-				}
-			}
-			hpxFile.WriteString(hpxLine)
 		}
-
+		if lineFields[i] != "A" && lineFields[i] != "R" {
+			(*locationCounter)++
+		}
 	}
 }

@@ -14,10 +14,11 @@ func Run(
 	definitionTables []map[string]shared.SymbolInfo,
 	useTables []map[string][]uint16,
 	programNames []string,
-	programSizes []uint16) {
+	programSizes []uint16,
+	stackSizes []uint16) uint16 {
 
 	if len(definitionTables) == 0 {
-		return
+		return 0
 	}
 
 	fmt.Println("")
@@ -36,6 +37,11 @@ func Run(
 	// second pass here
 	secondPass(useTables, programNames, programSizes, globalSymbolTable)
 
+	totalStackSize := uint16(0)
+	for _, size := range stackSizes {
+		totalStackSize += size
+	}
+	return totalStackSize
 }
 
 func firstPass(

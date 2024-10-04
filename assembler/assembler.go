@@ -46,6 +46,7 @@ func Run(filePaths ...string) {
 	useTables := []map[string][]uint16{}
 	programNames := []string{}
 	programSizes := []uint16{}
+	stackSizes := []uint16{}
 
 	for _, filePath := range filePaths {
 		file, err := os.Open(filePath)
@@ -60,7 +61,7 @@ func Run(filePaths ...string) {
 		masmaprg := macroProcessor.MacroPass(file)
 		defer masmaprg.Close()
 
-		assembler.firstPass(masmaprg)
+		stackSize := assembler.firstPass(masmaprg)
 
 		definitionTable,
 			useTable, programName, programSize := assembler.secondPass(masmaprg)
@@ -69,10 +70,13 @@ func Run(filePaths ...string) {
 		useTables = append(useTables, useTable)
 		programNames = append(programNames, programName)
 		programSizes = append(programSizes, programSize)
+		stackSizes = append(stackSizes, stackSize)
 		fmt.Println(definitionTable, useTable, programSize)
 	}
 	//fmt.Printf("%d %d", 'A', 'R')
-	linker.Run(definitionTables, useTables, programNames, programSizes)
+	totalStackSize := linker.Run(
+		definitionTables, useTables, programNames, programSizes, stackSizes)
+	fmt.Println(totalStackSize)
 }
 
 func getOpcode(token string) (shared.Operation, error) {
@@ -102,7 +106,7 @@ func getOpcode(token string) (shared.Operation, error) {
 	}
 }
 
-func (assembler *Assembler) firstPass(file *os.File) {
+func (assembler *Assembler) firstPass(file *os.File) uint16 {
 
 	//rewind after macroPass
 	file.Seek(0, 0)
@@ -111,6 +115,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 	// remove after linker is done
 	fmt.Println("")
 
+	stackSize := uint16(0)
 	for scanner.Scan() {
 		assembler.lineCounter++
 		line, isComment := parser.ReadLine(scanner)
@@ -157,7 +162,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
 				}
-				return
+				return stackSize
 			case "INTDEF":
 				if op1 == EMPTY || op2 != EMPTY {
 					assembler.addError(
@@ -201,6 +206,11 @@ func (assembler *Assembler) firstPass(file *os.File) {
 				if label != EMPTY {
 					assembler.insertIntoProperTable(label)
 				}
+				intStackSize, err := getOperandValue(op1)
+				if err != nil {
+					panic(err)
+				}
+				stackSize += uint16(intStackSize)
 			}
 			assembler.locationCounter += pseudoOpSize
 		} else {
@@ -230,7 +240,7 @@ func (assembler *Assembler) firstPass(file *os.File) {
 	}
 
 	assembler.addError(errors.New("sem instrução \"end\""))
-
+	return stackSize
 }
 
 func (assembler *Assembler) secondPass(file *os.File) (

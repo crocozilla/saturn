@@ -146,7 +146,7 @@ func (i Instruction) String() string {
 }
 
 func CreateBuildFile(fileName string) (*os.File, error) {
-	// if is test
+	// if is test (debugging behaves differently)
 	if strings.HasSuffix(os.Args[0], ".test") {
 		buildPath := filepath.Join("..", "build")
 		exists := directoryExists(buildPath)
@@ -167,7 +167,7 @@ func CreateBuildFile(fileName string) (*os.File, error) {
 }
 
 func OpenBuildFile(fileName string) (*os.File, error) {
-	// if is test
+	// if is test (debugging behaves differently)
 	if strings.HasSuffix(os.Args[0], ".test") {
 		buildPath := filepath.Join("..", "build")
 		path := filepath.Join(buildPath, fileName)

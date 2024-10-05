@@ -71,6 +71,7 @@ func firstPass(
 		spaceSize := 0
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
+			// refactor knowing len of text cant be 2
 			if len(lineFields) > 1 {
 				if lineFields[0] == "XX" {
 					spaceSize++
@@ -187,16 +188,86 @@ func secondPass(
 	defer hpxFile.Close()
 
 	locationCounter := 0
+
+	sizeOfPreviousText := 0
+	sizeOfPreviousData := 0
+
+	// write text
 	for program_idx, name := range programNames {
 		programFile, err := shared.OpenBuildFile(name + ".obj")
 		if err != nil {
 			panic(err)
 		}
 		defer programFile.Close()
-
 		scanner := bufio.NewScanner(programFile)
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
+			updateLineFieldsAddresses(lineFields,
+				globalSymbolTable,
+				useTables[program_idx],
+				&locationCounter,
+				segmentSizes,
+				program_idx)
+			writeHpxLine(hpxFile, lineFields)
+			if locationCounter >= sizeOfPreviousText+segmentSizes.text[program_idx] {
+				break
+			}
+		}
+		sizeOfPreviousText += segmentSizes.text[program_idx]
+	}
+
+	//write data
+	for program_idx, name := range programNames {
+		programFile, err := shared.OpenBuildFile(name + ".obj")
+		if err != nil {
+			panic(err)
+		}
+		defer programFile.Close()
+		scanner := bufio.NewScanner(programFile)
+
+		for scanner.Scan() {
+			lineFields := strings.Fields(scanner.Text())
+			// skip text
+			if len(lineFields) != 2 {
+				continue
+			}
+			updateLineFieldsAddresses(lineFields,
+				globalSymbolTable,
+				useTables[program_idx],
+				&locationCounter,
+				segmentSizes,
+				program_idx)
+			writeHpxLine(hpxFile, lineFields)
+			totalTextSize := sizeOfPreviousText
+			if locationCounter >= totalTextSize+
+				sizeOfPreviousData+segmentSizes.data[program_idx] {
+				break
+			}
+		}
+		sizeOfPreviousData += segmentSizes.data[program_idx]
+	}
+
+	// write space
+	for program_idx, name := range programNames {
+		programFile, err := shared.OpenBuildFile(name + ".obj")
+		if err != nil {
+			panic(err)
+		}
+		defer programFile.Close()
+		programFile.Seek(0, segmentSizes.text[program_idx]+
+			segmentSizes.data[program_idx])
+		scanner := bufio.NewScanner(programFile)
+
+		for scanner.Scan() {
+			lineFields := strings.Fields(scanner.Text())
+			// skip text and data
+			if len(lineFields) == 2 {
+				if lineFields[0] != "XX" {
+					continue
+				}
+			} else {
+				continue
+			}
 			updateLineFieldsAddresses(lineFields,
 				globalSymbolTable,
 				useTables[program_idx],

@@ -92,20 +92,7 @@ func firstPass(
 		segmentSizes.space = append(segmentSizes.space, spaceSize)
 	}
 
-	totalTextSize := 0
-	totalDataSize := 0
-	for i := range segmentSizes.text {
-		totalTextSize += segmentSizes.text[i]
-		totalDataSize += segmentSizes.data[i]
-	}
-	sizeOfPreviousData := 0
-	sizeOfPreviousText := 0
-	sizeOfPreviousSpace := 0
 	for program_idx := range programSizes {
-		textSize := segmentSizes.text[program_idx]
-		dataSize := segmentSizes.data[program_idx]
-		spaceSize := segmentSizes.space[program_idx]
-
 		// update useTables to global addresses
 		useTable := useTables[program_idx]
 		for symbol, uses := range useTable {
@@ -113,9 +100,8 @@ func firstPass(
 				address := int(useTable[symbol][use])
 				new_address := relocateRelativeAddress(
 					address,
-					textSize, dataSize,
-					totalTextSize, totalDataSize,
-					sizeOfPreviousText, sizeOfPreviousData, sizeOfPreviousSpace)
+					program_idx,
+					segmentSizes)
 				useTable[symbol][use] = uint16(new_address)
 			}
 		}
@@ -133,9 +119,8 @@ func firstPass(
 				address := int(globalAddress)
 				new_address := relocateRelativeAddress(
 					address,
-					textSize, dataSize,
-					totalTextSize, totalDataSize,
-					sizeOfPreviousText, sizeOfPreviousData, sizeOfPreviousSpace)
+					program_idx,
+					segmentSizes)
 				globalAddress = uint16(new_address)
 			}
 
@@ -143,9 +128,6 @@ func firstPass(
 				Address: globalAddress,
 				Mode:    'A'}
 		}
-		sizeOfPreviousData += dataSize
-		sizeOfPreviousText += textSize
-		sizeOfPreviousSpace += spaceSize
 	}
 	// check if all used symbols were defined
 	for _, useTable := range useTables {
@@ -283,28 +265,7 @@ func updateLineFieldsAddresses(
 	locationCounter *int,
 	segmentSizes SegmentSizes,
 	program_idx int) {
-	//for i := 0; i < program_idx; i++{
 
-	//}
-	textSize := segmentSizes.text[program_idx]
-	dataSize := segmentSizes.data[program_idx]
-
-	totalTextSize := 0
-	totalDataSize := 0
-	totalSpaceSize := 0
-	sizeOfPreviousText := 0
-	sizeOfPreviousData := 0
-	sizeOfPreviousSpace := 0
-	for i := range segmentSizes.text {
-		totalTextSize += segmentSizes.text[i]
-		totalDataSize += segmentSizes.data[i]
-		totalSpaceSize += segmentSizes.space[i]
-		if i < program_idx {
-			sizeOfPreviousText += segmentSizes.text[i]
-			sizeOfPreviousData += segmentSizes.data[i]
-			sizeOfPreviousSpace += segmentSizes.space[i]
-		}
-	}
 	for i := range lineFields {
 		// 00 A is sentinel value for INTDEF/INTUSE? value
 		if lineFields[i] == "00" {
@@ -327,9 +288,8 @@ func updateLineFieldsAddresses(
 			address, _ := strconv.Atoi(lineFields[i-1])
 			new_address := relocateRelativeAddress(
 				address,
-				textSize, dataSize,
-				totalTextSize, totalDataSize,
-				sizeOfPreviousText, sizeOfPreviousData, sizeOfPreviousSpace)
+				program_idx,
+				segmentSizes)
 			lineFields[i-1] = strconv.Itoa(new_address)
 
 		}
@@ -341,9 +301,27 @@ func updateLineFieldsAddresses(
 
 func relocateRelativeAddress(
 	address,
-	textSize, dataSize,
-	totalTextSize, totalDataSize,
-	sizeOfPreviousText, sizeOfPreviousData, sizeOfPreviousSpace int) int {
+	program_idx int,
+	segmentSizes SegmentSizes) int {
+
+	textSize := segmentSizes.text[program_idx]
+	dataSize := segmentSizes.data[program_idx]
+	totalTextSize := 0
+	totalDataSize := 0
+	totalSpaceSize := 0
+	sizeOfPreviousText := 0
+	sizeOfPreviousData := 0
+	sizeOfPreviousSpace := 0
+	for i := range segmentSizes.text {
+		totalTextSize += segmentSizes.text[i]
+		totalDataSize += segmentSizes.data[i]
+		totalSpaceSize += segmentSizes.space[i]
+		if i < program_idx {
+			sizeOfPreviousText += segmentSizes.text[i]
+			sizeOfPreviousData += segmentSizes.data[i]
+			sizeOfPreviousSpace += segmentSizes.space[i]
+		}
+	}
 
 	isText := address < textSize
 	isData := address >= textSize && address < textSize+dataSize

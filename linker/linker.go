@@ -10,6 +10,12 @@ import (
 	"strings"
 )
 
+type SegmentSizes struct {
+	text  []int
+	data  []int
+	space []int
+}
+
 func Run(
 	definitionTables []map[string]shared.SymbolInfo,
 	useTables []map[string][]uint16,
@@ -26,7 +32,7 @@ func Run(
 	for i := range programSizes {
 		fmt.Println(definitionTables[i], useTables[i], programSizes[i])
 	}
-	globalSymbolTable, textSizes, dataSizes, bssSizes :=
+	globalSymbolTable, segmentSizes :=
 		firstPass(definitionTables, useTables, programNames, programSizes)
 
 	fmt.Println("after:")
@@ -36,8 +42,7 @@ func Run(
 	}
 
 	// second pass here
-	secondPass(useTables, programNames, globalSymbolTable,
-		textSizes, dataSizes, bssSizes)
+	secondPass(useTables, programNames, globalSymbolTable, segmentSizes)
 
 	totalStackSize := uint16(0)
 	for _, size := range stackSizes {
@@ -51,7 +56,8 @@ func firstPass(
 	useTables []map[string][]uint16,
 	programNames []string,
 	programSizes []uint16) (
-	globalSymbolTable map[string]shared.SymbolInfo, textSizes, dataSizes, bssSizes []int) {
+	globalSymbolTable map[string]shared.SymbolInfo,
+	segmentSizes SegmentSizes) {
 
 	globalSymbolTable = map[string]shared.SymbolInfo{}
 	for i := range programSizes {
@@ -62,12 +68,12 @@ func firstPass(
 		scanner := bufio.NewScanner(programFile)
 		textSize := 0
 		dataSize := 0
-		bssSize := 0
+		spaceSize := 0
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
 			if len(lineFields) > 1 {
 				if lineFields[0] == "XX" {
-					bssSize++
+					spaceSize++
 				} else if lineFields[0] != "XX" && lineFields[1] == "A" {
 					dataSize++
 				} else {
@@ -82,26 +88,26 @@ func firstPass(
 			}
 		}
 
-		textSizes = append(textSizes, textSize)
-		dataSizes = append(dataSizes, dataSize)
-		bssSizes = append(bssSizes, bssSize)
+		segmentSizes.text = append(segmentSizes.text, textSize)
+		segmentSizes.data = append(segmentSizes.data, dataSize)
+		segmentSizes.space = append(segmentSizes.space, spaceSize)
 	}
 
 	totalTextSize := 0
 	totalDataSize := 0
-	totalBssSize := 0
-	for i := range textSizes {
-		totalTextSize += textSizes[i]
-		totalDataSize += dataSizes[i]
-		totalBssSize += bssSizes[i]
+	totalSpaceSize := 0
+	for i := range segmentSizes.text {
+		totalTextSize += segmentSizes.text[i]
+		totalDataSize += segmentSizes.data[i]
+		totalSpaceSize += segmentSizes.space[i]
 	}
 	sizeOfPreviousData := 0
 	sizeOfPreviousText := 0
-	sizeOfPreviousBss := 0
+	sizeOfPreviousSpace := 0
 	for i := range programSizes {
-		textSize := textSizes[i]
-		dataSize := dataSizes[i]
-		bssSize := bssSizes[i]
+		textSize := segmentSizes.text[i]
+		dataSize := segmentSizes.data[i]
+		spaceSize := segmentSizes.space[i]
 
 		// update useTables to global addresses
 		useTable := useTables[i]
@@ -117,7 +123,7 @@ func firstPass(
 				} else if isData {
 					address += otherTextSize + sizeOfPreviousData
 				} else {
-					address += otherTextSize + otherDataSize + sizeOfPreviousBss
+					address += otherTextSize + otherDataSize + sizeOfPreviousSpace
 				}
 				useTable[symbol][use] = uint16(address)
 			}
@@ -143,7 +149,7 @@ func firstPass(
 				} else if isData {
 					address += otherTextSize + sizeOfPreviousData
 				} else {
-					address += otherTextSize + otherDataSize + sizeOfPreviousBss
+					address += otherTextSize + otherDataSize + sizeOfPreviousSpace
 				}
 				globalAddress = uint16(address)
 			}
@@ -154,7 +160,7 @@ func firstPass(
 		}
 		sizeOfPreviousData += dataSize
 		sizeOfPreviousText += textSize
-		sizeOfPreviousBss += bssSize
+		sizeOfPreviousSpace += spaceSize
 	}
 	// check if all used symbols were defined
 	for _, useTable := range useTables {
@@ -165,14 +171,14 @@ func firstPass(
 		}
 	}
 
-	return globalSymbolTable, textSizes, dataSizes, bssSizes
+	return globalSymbolTable, segmentSizes
 }
 
 func secondPass(
 	useTables []map[string][]uint16,
 	programNames []string,
 	globalSymbolTable map[string]shared.SymbolInfo,
-	textSizes, dataSizes, bssSizes []int) {
+	segmentSizes SegmentSizes) {
 
 	hpxFile, err := shared.CreateBuildFile(programNames[0] + ".hpx")
 	if err != nil {
@@ -195,9 +201,7 @@ func secondPass(
 				globalSymbolTable,
 				useTables[program_idx],
 				&locationCounter,
-				textSizes,
-				dataSizes,
-				bssSizes,
+				segmentSizes,
 				program_idx)
 			writeHpxLine(hpxFile, lineFields)
 		}
@@ -226,28 +230,28 @@ func updateLineFieldsAddresses(
 	globalSymbolTable map[string]shared.SymbolInfo,
 	useTable map[string][]uint16,
 	locationCounter *int,
-	textSizes, dataSizes, bssSizes []int,
+	segmentSizes SegmentSizes,
 	program_idx int) {
 	//for i := 0; i < program_idx; i++{
 
 	//}
-	textSize := textSizes[program_idx]
-	dataSize := dataSizes[program_idx]
+	textSize := segmentSizes.text[program_idx]
+	dataSize := segmentSizes.data[program_idx]
 
 	totalTextSize := 0
 	totalDataSize := 0
-	totalBssSize := 0
+	totalSpaceSize := 0
 	sizeOfPreviousText := 0
 	sizeOfPreviousData := 0
-	sizeOfPreviousBss := 0
-	for i := range textSizes {
-		totalTextSize += textSizes[i]
-		totalDataSize += dataSizes[i]
-		totalBssSize += bssSizes[i]
+	sizeOfPreviousSpace := 0
+	for i := range segmentSizes.text {
+		totalTextSize += segmentSizes.text[i]
+		totalDataSize += segmentSizes.data[i]
+		totalSpaceSize += segmentSizes.space[i]
 		if i < program_idx {
-			sizeOfPreviousText += textSizes[i]
-			sizeOfPreviousData += dataSizes[i]
-			sizeOfPreviousBss += bssSizes[i]
+			sizeOfPreviousText += segmentSizes.text[i]
+			sizeOfPreviousData += segmentSizes.data[i]
+			sizeOfPreviousSpace += segmentSizes.space[i]
 		}
 	}
 	for i := range lineFields {
@@ -279,7 +283,7 @@ func updateLineFieldsAddresses(
 			} else if isData {
 				address += otherTextSize + sizeOfPreviousData
 			} else {
-				address += otherTextSize + otherDataSize + sizeOfPreviousBss
+				address += otherTextSize + otherDataSize + sizeOfPreviousSpace
 			}
 			lineFields[i-1] = strconv.Itoa(address)
 

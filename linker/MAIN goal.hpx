@@ -1,0 +1,14 @@
+130 17 * refers to symbol 3 (correct)
+130 16 * refers to symbol 4 (correct)
+130 18 * refers to SPSYM (correct)
+130 15 * refers to CSYM (correct)
+11
+130 14 * refers to symbol 2 (correct)
+258 10 
+10 * symbol 1
+20 * symbol 2
+50 * CSYM
+05 * symbol 4
+30 * symbol 3
+XX * SPSYM 
+XX * TEST

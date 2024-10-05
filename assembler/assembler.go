@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"saturn/linker"
 	"saturn/mp"
 	"saturn/parser"
 	"saturn/shared"
@@ -40,13 +39,9 @@ func New() *Assembler {
 }
 
 // writes to file program.txt as its output
-func Run(filePaths ...string) {
-
-	definitionTables := []map[string]shared.SymbolInfo{}
-	useTables := []map[string][]uint16{}
-	programNames := []string{}
-	programSizes := []uint16{}
-	stackSizes := []uint16{}
+func Run(filePaths ...string) (
+	definitionTables []map[string]shared.SymbolInfo, useTables []map[string][]uint16,
+	programNames []string, programSizes, stackSizes []uint16) {
 
 	for _, filePath := range filePaths {
 		file, err := os.Open(filePath)
@@ -71,12 +66,11 @@ func Run(filePaths ...string) {
 		programNames = append(programNames, programName)
 		programSizes = append(programSizes, programSize)
 		stackSizes = append(stackSizes, stackSize)
+
 		fmt.Println(definitionTable, useTable, programSize)
 	}
 	//fmt.Printf("%d %d", 'A', 'R')
-	totalStackSize := linker.Run(
-		definitionTables, useTables, programNames, programSizes, stackSizes)
-	fmt.Println(totalStackSize)
+	return definitionTables, useTables, programNames, programSizes, stackSizes
 }
 
 func getOpcode(token string) (shared.Operation, error) {

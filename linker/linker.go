@@ -26,7 +26,8 @@ func Run(
 	for i := range programSizes {
 		fmt.Println(definitionTables[i], useTables[i], programSizes[i])
 	}
-	globalSymbolTable := firstPass(definitionTables, useTables, programNames, programSizes)
+	globalSymbolTable, textSizes, dataSizes, bssSizes :=
+		firstPass(definitionTables, useTables, programNames, programSizes)
 
 	fmt.Println("after:")
 	fmt.Println(globalSymbolTable)
@@ -35,7 +36,8 @@ func Run(
 	}
 
 	// second pass here
-	secondPass(useTables, programNames, programSizes, globalSymbolTable)
+	secondPass(useTables, programNames, globalSymbolTable,
+		textSizes, dataSizes, bssSizes)
 
 	totalStackSize := uint16(0)
 	for _, size := range stackSizes {
@@ -48,15 +50,10 @@ func firstPass(
 	definitionTables []map[string]shared.SymbolInfo,
 	useTables []map[string][]uint16,
 	programNames []string,
-	programSizes []uint16) map[string]shared.SymbolInfo {
+	programSizes []uint16) (
+	globalSymbolTable map[string]shared.SymbolInfo, textSizes, dataSizes, bssSizes []int) {
 
-	globalSymbolTable := map[string]shared.SymbolInfo{}
-	sizeOfPreviousPrograms := uint16(0)
-
-	var textSizes []int
-	var dataSizes []int
-	var bssSizes []int
-
+	globalSymbolTable = map[string]shared.SymbolInfo{}
 	for i := range programSizes {
 		programFile, err := shared.OpenBuildFile(programNames[i] + ".obj")
 		if err != nil {
@@ -68,15 +65,19 @@ func firstPass(
 		bssSize := 0
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
-			if len(lineFields) == 2 {
+			if len(lineFields) > 1 {
 				if lineFields[0] == "XX" {
 					bssSize++
 				} else if lineFields[0] != "XX" && lineFields[1] == "A" {
 					dataSize++
 				} else {
-					textSize++
+					for _, field := range lineFields {
+						if field != "A" && field != "R" {
+							textSize++
+						}
+					}
 				}
-			} else if len(lineFields) != 0 {
+			} else if len(lineFields) == 1 {
 				textSize++
 			}
 		}
@@ -107,8 +108,8 @@ func firstPass(
 		for symbol, uses := range useTable {
 			for use := range uses {
 				address := int(useTable[symbol][use])
-				isText := address < textSize-1
-				isData := address > textSize-1 && address < textSize+dataSize-1
+				isText := address < textSize
+				isData := address >= textSize && address < textSize+dataSize
 				otherTextSize := totalTextSize - textSize
 				otherDataSize := totalDataSize - dataSize
 				if isText {
@@ -133,8 +134,8 @@ func firstPass(
 			globalAddress := info.Address
 			if info.Mode == shared.RELATIVE {
 				address := int(globalAddress)
-				isText := address < textSize-1
-				isData := address > textSize-1 && address < textSize+dataSize-1
+				isText := address < textSize
+				isData := address >= textSize && address < textSize+dataSize
 				otherTextSize := totalTextSize - textSize
 				otherDataSize := totalDataSize - dataSize
 				if isText {
@@ -149,9 +150,8 @@ func firstPass(
 
 			globalSymbolTable[symbol] = shared.SymbolInfo{
 				Address: globalAddress,
-				Mode:    info.Mode}
+				Mode:    'A'}
 		}
-		sizeOfPreviousPrograms += programSizes[i]
 		sizeOfPreviousData += dataSize
 		sizeOfPreviousText += textSize
 		sizeOfPreviousBss += bssSize
@@ -165,14 +165,14 @@ func firstPass(
 		}
 	}
 
-	return globalSymbolTable
+	return globalSymbolTable, textSizes, dataSizes, bssSizes
 }
 
 func secondPass(
 	useTables []map[string][]uint16,
 	programNames []string,
-	programSizes []uint16,
-	globalSymbolTable map[string]shared.SymbolInfo) {
+	globalSymbolTable map[string]shared.SymbolInfo,
+	textSizes, dataSizes, bssSizes []int) {
 
 	hpxFile, err := shared.CreateBuildFile(programNames[0] + ".hpx")
 	if err != nil {
@@ -180,9 +180,7 @@ func secondPass(
 	}
 	defer hpxFile.Close()
 
-	var scanner *bufio.Scanner
 	locationCounter := 0
-	sizeOfPreviousPrograms := uint16(0)
 	for program_idx, name := range programNames {
 		programFile, err := shared.OpenBuildFile(name + ".obj")
 		if err != nil {
@@ -190,18 +188,19 @@ func secondPass(
 		}
 		defer programFile.Close()
 
-		scanner = bufio.NewScanner(programFile)
+		scanner := bufio.NewScanner(programFile)
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
 			updateLineFieldsAddresses(lineFields,
 				globalSymbolTable,
 				useTables[program_idx],
 				&locationCounter,
-				sizeOfPreviousPrograms)
+				textSizes,
+				dataSizes,
+				bssSizes,
+				program_idx)
 			writeHpxLine(hpxFile, lineFields)
 		}
-		sizeOfPreviousPrograms += programSizes[program_idx]
-
 	}
 }
 
@@ -227,7 +226,30 @@ func updateLineFieldsAddresses(
 	globalSymbolTable map[string]shared.SymbolInfo,
 	useTable map[string][]uint16,
 	locationCounter *int,
-	sizeOfPreviousPrograms uint16) {
+	textSizes, dataSizes, bssSizes []int,
+	program_idx int) {
+	//for i := 0; i < program_idx; i++{
+
+	//}
+	textSize := textSizes[program_idx]
+	dataSize := dataSizes[program_idx]
+
+	totalTextSize := 0
+	totalDataSize := 0
+	totalBssSize := 0
+	sizeOfPreviousText := 0
+	sizeOfPreviousData := 0
+	sizeOfPreviousBss := 0
+	for i := range textSizes {
+		totalTextSize += textSizes[i]
+		totalDataSize += dataSizes[i]
+		totalBssSize += bssSizes[i]
+		if i < program_idx {
+			sizeOfPreviousText += textSizes[i]
+			sizeOfPreviousData += dataSizes[i]
+			sizeOfPreviousBss += bssSizes[i]
+		}
+	}
 	for i := range lineFields {
 		// 00 A is sentinel value for INTDEF/INTUSE? value
 		if lineFields[i] == "00" {
@@ -241,16 +263,26 @@ func updateLineFieldsAddresses(
 								int(globalSymbolTable[symbol].Address))
 
 							lineFields[i] = address
-							lineFields[i+1] = "A"
 						}
 					}
 				}
 			}
 		}
 		if lineFields[i] == "R" {
-			fieldValue, _ := strconv.Atoi(lineFields[i-1])
-			fieldValue += int(sizeOfPreviousPrograms)
-			lineFields[i-1] = strconv.Itoa(fieldValue)
+			address, _ := strconv.Atoi(lineFields[i-1])
+			isText := address < textSize
+			isData := address >= textSize && address < textSize+dataSize
+			otherTextSize := totalTextSize - textSize
+			otherDataSize := totalDataSize - dataSize
+			if isText {
+				address += sizeOfPreviousText
+			} else if isData {
+				address += otherTextSize + sizeOfPreviousData
+			} else {
+				address += otherTextSize + otherDataSize + sizeOfPreviousBss
+			}
+			lineFields[i-1] = strconv.Itoa(address)
+
 		}
 		if lineFields[i] != "A" && lineFields[i] != "R" {
 			(*locationCounter)++

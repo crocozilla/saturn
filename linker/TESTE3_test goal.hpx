@@ -1,0 +1,24 @@
+130 26 * refers to X1 (correct)
+130 27 * refers to Y1 (correct)
+130 28 * refers to Z1 (correct)
+130 29 * refers to A1 (correct)
+130 20 * refers to UP1 (correct)
+130 30 * refers to X2 (correct)
+130 31 * refers to Y2 (correct)
+130 32 * refers to Z2 (correct)
+130 33 * refers to A2 (correct)
+130 23 * refers to UP2 (correct)
+15 
+10 
+07 
+15 
+10 
+07 
+XX * X1
+XX * Y1
+XX * Z1
+XX * A1
+XX * X2
+XX * Y2
+XX * Z2
+XX * A2

@@ -86,12 +86,39 @@ func firstPass(
 		bssSizes = append(bssSizes, bssSize)
 	}
 
+	totalTextSize := 0
+	totalDataSize := 0
+	totalBssSize := 0
+	for i := range textSizes {
+		totalTextSize += textSizes[i]
+		totalDataSize += dataSizes[i]
+		totalBssSize += bssSizes[i]
+	}
+	sizeOfPreviousData := 0
+	sizeOfPreviousText := 0
+	sizeOfPreviousBss := 0
 	for i := range programSizes {
+		textSize := textSizes[i]
+		dataSize := dataSizes[i]
+		bssSize := bssSizes[i]
+
 		// update useTables to global addresses
 		useTable := useTables[i]
 		for symbol, uses := range useTable {
 			for use := range uses {
-				useTable[symbol][use] += sizeOfPreviousPrograms
+				address := int(useTable[symbol][use])
+				isText := address < textSize-1
+				isData := address > textSize-1 && address < textSize+dataSize-1
+				otherTextSize := totalTextSize - textSize
+				otherDataSize := totalDataSize - dataSize
+				if isText {
+					address += sizeOfPreviousText
+				} else if isData {
+					address += otherTextSize + sizeOfPreviousData
+				} else {
+					address += otherTextSize + otherDataSize + sizeOfPreviousBss
+				}
+				useTable[symbol][use] = uint16(address)
 			}
 		}
 
@@ -106,7 +133,6 @@ func firstPass(
 			globalAddress := info.Address
 			if info.Mode == shared.RELATIVE {
 				globalAddress += sizeOfPreviousPrograms
-				fmt.Println(sizeOfPreviousPrograms, "size")
 			}
 
 			globalSymbolTable[symbol] = shared.SymbolInfo{
@@ -114,6 +140,9 @@ func firstPass(
 				Mode:    info.Mode}
 		}
 		sizeOfPreviousPrograms += programSizes[i]
+		sizeOfPreviousData += dataSize
+		sizeOfPreviousText += textSize
+		sizeOfPreviousBss += bssSize
 	}
 	// check if all used symbols were defined
 	for _, useTable := range useTables {

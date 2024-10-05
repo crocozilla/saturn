@@ -66,10 +66,8 @@ func Run(filePaths ...string) (
 		programNames = append(programNames, programName)
 		programSizes = append(programSizes, programSize)
 		stackSizes = append(stackSizes, stackSize)
-
-		fmt.Println(definitionTable, useTable, programSize)
 	}
-	//fmt.Printf("%d %d", 'A', 'R')
+
 	return definitionTables, useTables, programNames, programSizes, stackSizes
 }
 
@@ -106,8 +104,6 @@ func (assembler *Assembler) firstPass(file *os.File) uint16 {
 	file.Seek(0, 0)
 
 	scanner := bufio.NewScanner(file)
-	// remove after linker is done
-	fmt.Println("")
 
 	stackSize := uint16(0)
 	for scanner.Scan() {
@@ -119,7 +115,6 @@ func (assembler *Assembler) firstPass(file *os.File) uint16 {
 
 		// if operation is a pseudo-instruction, op2 is always EMPTY
 		label, operationString, op1, op2 := parser.Line(line)
-		fmt.Println(line)
 		op1SymbolErr := validateSymbol(op1)
 
 		if _, ok := assembler.useTable[op1]; ok {
@@ -239,7 +234,6 @@ func (assembler *Assembler) firstPass(file *os.File) uint16 {
 
 func (assembler *Assembler) secondPass(file *os.File) (
 	map[string]shared.SymbolInfo, map[string][]uint16, string, uint16) {
-	//fmt.Println(assembler.useTable)
 
 	// File rewind to origin and reset locationCount
 	file.Seek(0, 0)

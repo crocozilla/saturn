@@ -136,24 +136,21 @@ func secondPass(
 	}
 	defer hpxFile.Close()
 
-	locationCounter := 0
-	sizeOfPreviousText := 0
-	sizeOfPreviousData := 0
+	var programFiles []*os.File
 	for _, name := range programNames {
 		programFile, err := shared.OpenBuildFile(name + ".obj")
 		if err != nil {
 			panic(err)
 		}
+		programFiles = append(programFiles, programFile)
 		defer programFile.Close()
 	}
-
+	locationCounter := 0
+	sizeOfPreviousText := 0
+	sizeOfPreviousData := 0
 	// write text
-	for program_idx, name := range programNames {
-		programFile, err := shared.OpenBuildFile(name + ".obj")
-		if err != nil {
-			panic(err)
-		}
-		defer programFile.Close()
+	for program_idx := range programNames {
+		programFile := programFiles[program_idx]
 		scanner := bufio.NewScanner(programFile)
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
@@ -175,12 +172,9 @@ func secondPass(
 	}
 
 	//write data
-	for program_idx, name := range programNames {
-		programFile, err := shared.OpenBuildFile(name + ".obj")
-		if err != nil {
-			panic(err)
-		}
-		defer programFile.Close()
+	for program_idx := range programNames {
+		programFile := programFiles[program_idx]
+		programFile.Seek(0, 0)
 		scanner := bufio.NewScanner(programFile)
 
 		for scanner.Scan() {
@@ -208,13 +202,9 @@ func secondPass(
 	}
 
 	// write space
-	for program_idx, name := range programNames {
-		programFile, err := shared.OpenBuildFile(name + ".obj")
-		if err != nil {
-			panic(err)
-		}
-		defer programFile.Close()
-
+	for program_idx := range programNames {
+		programFile := programFiles[program_idx]
+		programFile.Seek(0, 0)
 		scanner := bufio.NewScanner(programFile)
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())

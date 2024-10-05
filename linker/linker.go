@@ -132,7 +132,19 @@ func firstPass(
 
 			globalAddress := info.Address
 			if info.Mode == shared.RELATIVE {
-				globalAddress += sizeOfPreviousPrograms
+				address := int(globalAddress)
+				isText := address < textSize-1
+				isData := address > textSize-1 && address < textSize+dataSize-1
+				otherTextSize := totalTextSize - textSize
+				otherDataSize := totalDataSize - dataSize
+				if isText {
+					address += sizeOfPreviousText
+				} else if isData {
+					address += otherTextSize + sizeOfPreviousData
+				} else {
+					address += otherTextSize + otherDataSize + sizeOfPreviousBss
+				}
+				globalAddress = uint16(address)
 			}
 
 			globalSymbolTable[symbol] = shared.SymbolInfo{

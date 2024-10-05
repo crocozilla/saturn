@@ -3,7 +3,6 @@ package linker
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"os"
 	"saturn/shared"
 	"strconv"
@@ -27,21 +26,9 @@ func Run(
 		return 0
 	}
 
-	fmt.Println("")
-	fmt.Println("before: ")
-	for i := range programSizes {
-		fmt.Println(definitionTables[i], useTables[i], programSizes[i])
-	}
 	globalSymbolTable, segmentSizes :=
 		firstPass(definitionTables, useTables, programNames, programSizes)
 
-	fmt.Println("after:")
-	fmt.Println(globalSymbolTable)
-	for i := range programSizes {
-		fmt.Println(useTables[i], programSizes[i])
-	}
-
-	// second pass here
 	secondPass(useTables, programNames, globalSymbolTable, segmentSizes)
 
 	totalStackSize := uint16(0)
@@ -150,9 +137,15 @@ func secondPass(
 	defer hpxFile.Close()
 
 	locationCounter := 0
-
 	sizeOfPreviousText := 0
 	sizeOfPreviousData := 0
+	for _, name := range programNames {
+		programFile, err := shared.OpenBuildFile(name + ".obj")
+		if err != nil {
+			panic(err)
+		}
+		defer programFile.Close()
+	}
 
 	// write text
 	for program_idx, name := range programNames {
@@ -171,7 +164,10 @@ func secondPass(
 				segmentSizes,
 				program_idx)
 			writeHpxLine(hpxFile, lineFields)
-			if locationCounter >= sizeOfPreviousText+segmentSizes.text[program_idx] {
+			textOver := locationCounter >=
+				sizeOfPreviousText+segmentSizes.text[program_idx]
+
+			if textOver {
 				break
 			}
 		}
@@ -201,8 +197,10 @@ func secondPass(
 				program_idx)
 			writeHpxLine(hpxFile, lineFields)
 			totalTextSize := sizeOfPreviousText
-			if locationCounter >= totalTextSize+
-				sizeOfPreviousData+segmentSizes.data[program_idx] {
+			dataOver := locationCounter >= totalTextSize+
+				sizeOfPreviousData+segmentSizes.data[program_idx]
+
+			if dataOver {
 				break
 			}
 		}
@@ -216,10 +214,8 @@ func secondPass(
 			panic(err)
 		}
 		defer programFile.Close()
-		programFile.Seek(0, segmentSizes.text[program_idx]+
-			segmentSizes.data[program_idx])
-		scanner := bufio.NewScanner(programFile)
 
+		scanner := bufio.NewScanner(programFile)
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
 			// skip text and data
@@ -268,7 +264,6 @@ func updateLineFieldsAddresses(
 			// cant break bounds because of way obj files are created
 			if lineFields[i+1] == "A" {
 				for symbol, useAddresses := range useTable {
-					fmt.Println(symbol, useAddresses)
 					for _, useAddress := range useAddresses {
 						if useAddress == uint16(*locationCounter) {
 							address := strconv.Itoa(

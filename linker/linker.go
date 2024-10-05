@@ -99,9 +99,7 @@ func firstPass(
 			for use := range uses {
 				address := int(useTable[symbol][use])
 				new_address := relocateRelativeAddress(
-					address,
-					program_idx,
-					segmentSizes)
+					address, program_idx, segmentSizes)
 				useTable[symbol][use] = uint16(new_address)
 			}
 		}
@@ -118,9 +116,7 @@ func firstPass(
 			if info.Mode == shared.RELATIVE {
 				address := int(globalAddress)
 				new_address := relocateRelativeAddress(
-					address,
-					program_idx,
-					segmentSizes)
+					address, program_idx, segmentSizes)
 				globalAddress = uint16(new_address)
 			}
 
@@ -287,9 +283,7 @@ func updateLineFieldsAddresses(
 		if lineFields[i] == "R" {
 			address, _ := strconv.Atoi(lineFields[i-1])
 			new_address := relocateRelativeAddress(
-				address,
-				program_idx,
-				segmentSizes)
+				address, program_idx, segmentSizes)
 			lineFields[i-1] = strconv.Itoa(new_address)
 
 		}
@@ -304,8 +298,8 @@ func relocateRelativeAddress(
 	program_idx int,
 	segmentSizes SegmentSizes) int {
 
-	textSize := segmentSizes.text[program_idx]
-	dataSize := segmentSizes.data[program_idx]
+	currentProgramTextSize := segmentSizes.text[program_idx]
+	currentProgramDataSize := segmentSizes.data[program_idx]
 	totalTextSize := 0
 	totalDataSize := 0
 	totalSpaceSize := 0
@@ -323,10 +317,12 @@ func relocateRelativeAddress(
 		}
 	}
 
-	isText := address < textSize
-	isData := address >= textSize && address < textSize+dataSize
-	otherTextSize := totalTextSize - textSize
-	otherDataSize := totalDataSize - dataSize
+	isText := address < currentProgramTextSize
+	isData := address >= currentProgramTextSize &&
+		address < currentProgramTextSize+currentProgramDataSize
+
+	otherTextSize := totalTextSize - currentProgramTextSize
+	otherDataSize := totalDataSize - currentProgramDataSize
 	if isText {
 		address += sizeOfPreviousText
 	} else if isData {

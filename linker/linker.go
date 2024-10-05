@@ -113,18 +113,12 @@ func firstPass(
 		for symbol, uses := range useTable {
 			for use := range uses {
 				address := int(useTable[symbol][use])
-				isText := address < textSize
-				isData := address >= textSize && address < textSize+dataSize
-				otherTextSize := totalTextSize - textSize
-				otherDataSize := totalDataSize - dataSize
-				if isText {
-					address += sizeOfPreviousText
-				} else if isData {
-					address += otherTextSize + sizeOfPreviousData
-				} else {
-					address += otherTextSize + otherDataSize + sizeOfPreviousSpace
-				}
-				useTable[symbol][use] = uint16(address)
+				new_address := relocateRelativeAddress(
+					address,
+					textSize, dataSize,
+					totalTextSize, totalDataSize,
+					sizeOfPreviousText, sizeOfPreviousData, sizeOfPreviousSpace)
+				useTable[symbol][use] = uint16(new_address)
 			}
 		}
 
@@ -139,18 +133,12 @@ func firstPass(
 			globalAddress := info.Address
 			if info.Mode == shared.RELATIVE {
 				address := int(globalAddress)
-				isText := address < textSize
-				isData := address >= textSize && address < textSize+dataSize
-				otherTextSize := totalTextSize - textSize
-				otherDataSize := totalDataSize - dataSize
-				if isText {
-					address += sizeOfPreviousText
-				} else if isData {
-					address += otherTextSize + sizeOfPreviousData
-				} else {
-					address += otherTextSize + otherDataSize + sizeOfPreviousSpace
-				}
-				globalAddress = uint16(address)
+				new_address := relocateRelativeAddress(
+					address,
+					textSize, dataSize,
+					totalTextSize, totalDataSize,
+					sizeOfPreviousText, sizeOfPreviousData, sizeOfPreviousSpace)
+				globalAddress = uint16(new_address)
 			}
 
 			globalSymbolTable[symbol] = shared.SymbolInfo{
@@ -339,18 +327,12 @@ func updateLineFieldsAddresses(
 		}
 		if lineFields[i] == "R" {
 			address, _ := strconv.Atoi(lineFields[i-1])
-			isText := address < textSize
-			isData := address >= textSize && address < textSize+dataSize
-			otherTextSize := totalTextSize - textSize
-			otherDataSize := totalDataSize - dataSize
-			if isText {
-				address += sizeOfPreviousText
-			} else if isData {
-				address += otherTextSize + sizeOfPreviousData
-			} else {
-				address += otherTextSize + otherDataSize + sizeOfPreviousSpace
-			}
-			lineFields[i-1] = strconv.Itoa(address)
+			new_address := relocateRelativeAddress(
+				address,
+				textSize, dataSize,
+				totalTextSize, totalDataSize,
+				sizeOfPreviousText, sizeOfPreviousData, sizeOfPreviousSpace)
+			lineFields[i-1] = strconv.Itoa(new_address)
 
 		}
 		if lineFields[i] != "A" && lineFields[i] != "R" {
@@ -361,13 +343,9 @@ func updateLineFieldsAddresses(
 
 func relocateRelativeAddress(
 	address,
-	textSize,
-	dataSize,
-	totalTextSize,
-	totalDataSize,
-	sizeOfPreviousText,
-	sizeOfPreviousData,
-	sizeOfPreviousSpace int) int {
+	textSize, dataSize,
+	totalTextSize, totalDataSize,
+	sizeOfPreviousText, sizeOfPreviousData, sizeOfPreviousSpace int) int {
 
 	isText := address < textSize
 	isData := address >= textSize && address < textSize+dataSize

@@ -26,7 +26,7 @@ func Run(
 	for i := range programSizes {
 		fmt.Println(definitionTables[i], useTables[i], programSizes[i])
 	}
-	globalSymbolTable := firstPass(definitionTables, useTables, programSizes)
+	globalSymbolTable := firstPass(definitionTables, useTables, programNames, programSizes)
 
 	fmt.Println("after:")
 	fmt.Println(globalSymbolTable)
@@ -47,10 +47,45 @@ func Run(
 func firstPass(
 	definitionTables []map[string]shared.SymbolInfo,
 	useTables []map[string][]uint16,
+	programNames []string,
 	programSizes []uint16) map[string]shared.SymbolInfo {
 
 	globalSymbolTable := map[string]shared.SymbolInfo{}
 	sizeOfPreviousPrograms := uint16(0)
+
+	var textSizes []int
+	var dataSizes []int
+	var bssSizes []int
+
+	for i := range programSizes {
+		programFile, err := shared.OpenBuildFile(programNames[i] + ".obj")
+		if err != nil {
+			panic(err)
+		}
+		scanner := bufio.NewScanner(programFile)
+		textSize := 0
+		dataSize := 0
+		bssSize := 0
+		for scanner.Scan() {
+			lineFields := strings.Fields(scanner.Text())
+			if len(lineFields) == 2 {
+				if lineFields[0] == "XX" {
+					bssSize++
+				} else if lineFields[0] != "XX" && lineFields[1] == "A" {
+					dataSize++
+				} else {
+					textSize++
+				}
+			} else if len(lineFields) != 0 {
+				textSize++
+			}
+		}
+
+		textSizes = append(textSizes, textSize)
+		dataSizes = append(dataSizes, dataSize)
+		bssSizes = append(bssSizes, bssSize)
+	}
+
 	for i := range programSizes {
 		// update useTables to global addresses
 		useTable := useTables[i]
@@ -71,6 +106,7 @@ func firstPass(
 			globalAddress := info.Address
 			if info.Mode == shared.RELATIVE {
 				globalAddress += sizeOfPreviousPrograms
+				fmt.Println(sizeOfPreviousPrograms, "size")
 			}
 
 			globalSymbolTable[symbol] = shared.SymbolInfo{
@@ -157,14 +193,14 @@ func updateLineFieldsAddresses(
 			// cant break bounds because of way obj files are created
 			if lineFields[i+1] == "A" {
 				for symbol, useAddresses := range useTable {
+					fmt.Println(symbol, useAddresses)
 					for _, useAddress := range useAddresses {
 						if useAddress == uint16(*locationCounter) {
 							address := strconv.Itoa(
 								int(globalSymbolTable[symbol].Address))
-							mode := string(globalSymbolTable[symbol].Mode)
 
 							lineFields[i] = address
-							lineFields[i+1] = mode
+							lineFields[i+1] = "A"
 						}
 					}
 				}

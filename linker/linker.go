@@ -71,21 +71,19 @@ func firstPass(
 		spaceSize := 0
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
-			// refactor knowing len of text cant be 2
-			if len(lineFields) > 1 {
-				if lineFields[0] == "XX" {
-					spaceSize++
-				} else if lineFields[0] != "XX" && lineFields[1] == "A" {
-					dataSize++
-				} else {
-					for _, field := range lineFields {
-						if field != "A" && field != "R" {
-							textSize++
-						}
+			if lineFields[0] == "XX" {
+				spaceSize++
+
+				// only data and space can have size 2
+			} else if len(lineFields) == 2 {
+				dataSize++
+
+			} else {
+				for _, field := range lineFields {
+					if field != "A" && field != "R" {
+						textSize++
 					}
 				}
-			} else if len(lineFields) == 1 {
-				textSize++
 			}
 		}
 
@@ -261,11 +259,7 @@ func secondPass(
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())
 			// skip text and data
-			if len(lineFields) == 2 {
-				if lineFields[0] != "XX" {
-					continue
-				}
-			} else {
+			if lineFields[0] != "XX" {
 				continue
 			}
 			updateLineFieldsAddresses(lineFields,
@@ -363,4 +357,28 @@ func updateLineFieldsAddresses(
 			(*locationCounter)++
 		}
 	}
+}
+
+func relocateRelativeAddress(
+	address,
+	textSize,
+	dataSize,
+	totalTextSize,
+	totalDataSize,
+	sizeOfPreviousText,
+	sizeOfPreviousData,
+	sizeOfPreviousSpace int) int {
+
+	isText := address < textSize
+	isData := address >= textSize && address < textSize+dataSize
+	otherTextSize := totalTextSize - textSize
+	otherDataSize := totalDataSize - dataSize
+	if isText {
+		address += sizeOfPreviousText
+	} else if isData {
+		address += otherTextSize + sizeOfPreviousData
+	} else {
+		address += otherTextSize + otherDataSize + sizeOfPreviousSpace
+	}
+	return address
 }

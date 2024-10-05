@@ -111,6 +111,8 @@ func secondPass(
 		if err != nil {
 			panic(err)
 		}
+		defer programFile.Close()
+
 		scanner = bufio.NewScanner(programFile)
 		for scanner.Scan() {
 			lineFields := strings.Fields(scanner.Text())

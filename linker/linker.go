@@ -230,7 +230,11 @@ func writeHpxLine(hpxFile *os.File, lineFields []string) {
 			hpxLine += lineFields[i]
 		}
 		if i+1 < len(lineFields) {
-			hpxLine += " "
+			// prevents extra space at the end, because we dont
+			// print "A"s and "R"s
+			if lineFields[i+1] != "A" && lineFields[i+1] != "R" {
+				hpxLine += " "
+			}
 		} else {
 			hpxLine += "\n"
 		}

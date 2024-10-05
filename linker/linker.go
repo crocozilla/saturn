@@ -94,22 +94,20 @@ func firstPass(
 
 	totalTextSize := 0
 	totalDataSize := 0
-	totalSpaceSize := 0
 	for i := range segmentSizes.text {
 		totalTextSize += segmentSizes.text[i]
 		totalDataSize += segmentSizes.data[i]
-		totalSpaceSize += segmentSizes.space[i]
 	}
 	sizeOfPreviousData := 0
 	sizeOfPreviousText := 0
 	sizeOfPreviousSpace := 0
-	for i := range programSizes {
-		textSize := segmentSizes.text[i]
-		dataSize := segmentSizes.data[i]
-		spaceSize := segmentSizes.space[i]
+	for program_idx := range programSizes {
+		textSize := segmentSizes.text[program_idx]
+		dataSize := segmentSizes.data[program_idx]
+		spaceSize := segmentSizes.space[program_idx]
 
 		// update useTables to global addresses
-		useTable := useTables[i]
+		useTable := useTables[program_idx]
 		for symbol, uses := range useTable {
 			for use := range uses {
 				address := int(useTable[symbol][use])
@@ -124,7 +122,7 @@ func firstPass(
 
 		// copy definition tables to global symbol table
 		// with correct global address
-		definitionTable := definitionTables[i]
+		definitionTable := definitionTables[program_idx]
 		for symbol, info := range definitionTable {
 			if _, ok := globalSymbolTable[symbol]; ok {
 				panic(errors.New("símbolo global já definido"))

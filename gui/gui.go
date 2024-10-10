@@ -69,9 +69,9 @@ func updateGUI() {
 
 	mem.RemoveAll()
 	for i, value := range machine.Memory() {
-		textAddress := canvas.NewText(strconv.Itoa(int(i)), color.White)
-		textValue := canvas.NewText("["+strconv.Itoa(int(value))+"]", color.RGBA{R: 255, B: 0, G: 255, A: 255})
-		cont := container.NewHBox(textAddress, layout.NewSpacer(), textValue)
+		textAddress := canvas.NewText(fmt.Sprintf("%03d", i), color.White)
+		textValue := canvas.NewText("["+fmt.Sprintf("%03d", value)+"]", color.RGBA{R: 255, B: 0, G: 255, A: 255})
+		cont := container.NewHBox(textAddress, textValue)
 
 		mem.Add(cont)
 	}

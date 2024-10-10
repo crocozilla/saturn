@@ -15,20 +15,24 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var machine = vm.New()
-
 var mem = container.NewGridWithColumns(4)
 var r = container.NewGridWithColumns(3)
-var output = widget.NewLabel(strconv.Itoa((int(machine.Output()))))
+var machine *vm.VirtualMachine
+var output *widget.Label
 var programBackup []shared.Word
 
-func InsertProgram(program []shared.Word) {
+func Initialize(stackLimit uint16) {
+	machine = vm.New(stackLimit)
+	output = widget.NewLabel(strconv.Itoa((int(machine.Output()))))
+}
+
+func LoadProgram(program []shared.Word) {
 	programBackup = program
-	machine.InsertProgram(program)
+	machine.LoadProgram(program)
 }
 
 func ReInsertProgram() {
-	machine.InsertProgram(programBackup)
+	machine.LoadProgram(programBackup)
 }
 
 func Run() {

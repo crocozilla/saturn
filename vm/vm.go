@@ -6,8 +6,6 @@ import (
 )
 
 const stackBase uint16 = 2 // 2 é definido no pdf do trabalho
-const stackLimit uint16 = 10
-const programBase uint16 = stackBase + stackLimit + 1
 
 type VirtualMachine struct {
 	memory         [128]shared.Word
@@ -18,6 +16,8 @@ type VirtualMachine struct {
 	memoryAddress  uint16
 	opImpls        map[shared.Operation]func(shared.Operands, shared.AddressMode)
 	isRunning      bool
+	stackLimit     uint16
+	programBase    uint16
 	programEnd     uint16
 	io             struct {
 		input  shared.Word
@@ -25,11 +25,13 @@ type VirtualMachine struct {
 	}
 }
 
-func New() *VirtualMachine {
+func New(stackLimitArg uint16) *VirtualMachine {
 	vm := new(VirtualMachine)
 	vm.setupOperations()
 	vm.stackInit()
 	vm.isRunning = true
+	vm.stackLimit = stackLimitArg
+	vm.programBase = stackBase + vm.stackLimit + 1
 	return vm
 }
 
@@ -69,11 +71,11 @@ func (vm *VirtualMachine) SetInput(data uint16) {
 	vm.io.input = shared.Word(data)
 }
 
-func (vm *VirtualMachine) InsertProgram(program []shared.Word) {
+func (vm *VirtualMachine) LoadProgram(program []shared.Word) {
 	var i uint16
 
 	for i = 0; i < uint16(len(program)); i++ {
-		putAddress := programBase + i
+		putAddress := vm.programBase + i
 
 		if putAddress >= uint16(len(vm.memory)) {
 			panic("the program exceeds the memory space")
@@ -82,7 +84,7 @@ func (vm *VirtualMachine) InsertProgram(program []shared.Word) {
 		vm.memory[putAddress] = program[i]
 	}
 
-	vm.programEnd = i + programBase
+	vm.programEnd = i + vm.programBase
 }
 
 func (vm *VirtualMachine) setupOperations() {
@@ -108,13 +110,13 @@ func (vm *VirtualMachine) setupOperations() {
 }
 
 func (vm *VirtualMachine) stackInit() {
-	vm.memory[stackBase] = shared.Word(stackLimit) // primeiro elemento da pilha é seu limite (definido no pdf)
+	vm.memory[stackBase] = shared.Word(vm.stackLimit) // primeiro elemento da pilha é seu limite (definido no pdf)
 }
 
 func (vm *VirtualMachine) stackPush(value shared.Word) error {
 	vm.stackPointer++
 
-	if vm.stackPointer > stackLimit {
+	if vm.stackPointer > vm.stackLimit {
 		vm.stackPointer = 0
 		return errors.New("stack overflow")
 	}
@@ -143,7 +145,7 @@ func (vm *VirtualMachine) Reset() {
 	vm.memoryAddress = 0
 	vm.stackPointer = 0
 
-	for i := 0; i < int(programBase); i++ {
+	for i := 0; i < int(vm.programBase); i++ {
 		vm.memory[i] = 0
 	}
 
@@ -156,7 +158,7 @@ func (vm *VirtualMachine) Reset() {
 }
 
 func (vm *VirtualMachine) decodeInst() shared.Instruction {
-	address := programBase + vm.programCounter
+	address := vm.programBase + vm.programCounter
 	operationInfo := vm.memory[address]
 
 	var operands shared.Operands

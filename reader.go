@@ -2,14 +2,13 @@ package main
 
 import (
 	"bufio"
-	"os"
 	"saturn/shared"
 	"strconv"
 	"strings"
 )
 
-func ReadProgram(filePath string) []shared.Word {
-	file, err := os.Open(filePath)
+func ReadProgram(fileName string) []shared.Word {
+	file, err := shared.OpenBuildFile(fileName)
 	if err != nil {
 		panic(err)
 	}
@@ -20,6 +19,11 @@ func ReadProgram(filePath string) []shared.Word {
 
 	for scanner.Scan() {
 		curr_instr := strings.Split(scanner.Text(), " ")
+
+		if curr_instr[0] == "XX" { // if SPACE
+			program = append(program, shared.Word(0))
+			continue
+		}
 
 		binOp, err := strconv.Atoi(curr_instr[0])
 		if err != nil {

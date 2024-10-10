@@ -20,10 +20,13 @@ func Run(
 	useTables []map[string][]uint16,
 	programNames []string,
 	programSizes []uint16,
-	stackSizes []uint16) uint16 {
+	stackSizes []uint16) (uint16, string) {
 
 	if len(definitionTables) == 0 {
-		return 0
+		return 0, ""
+	}
+	if len(programNames) == 0 {
+		panic("caminho inalcançavel inesperadamente alcançado")
 	}
 
 	globalSymbolTable, segmentSizes :=
@@ -35,7 +38,7 @@ func Run(
 	for _, size := range stackSizes {
 		totalStackSize += size
 	}
-	return totalStackSize
+	return totalStackSize, programNames[0]
 }
 
 func firstPass(

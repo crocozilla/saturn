@@ -38,11 +38,12 @@ func ReInsertProgram() {
 func Run() {
 	a := app.New()
 
-	left := container.NewVBox(buttons())
+	//left := container.NewVBox(buttons())
 	middle := container.NewVBox(registers(), io(), buttons())
 	right := container.NewVBox(memory())
 
-	root := container.NewHBox(left, layout.NewSpacer(), middle, layout.NewSpacer(), right)
+	root := container.NewHBox(layout.NewSpacer(), layout.NewSpacer(),
+		middle, layout.NewSpacer(), right)
 
 	w := a.NewWindow("Saturn")
 	w.Resize(fyne.NewSize(1200, 700))

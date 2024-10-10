@@ -226,12 +226,20 @@ func (vm *VirtualMachine) br(operands shared.Operands, mode shared.AddressMode) 
 }
 
 func (vm *VirtualMachine) brneg(operands shared.Operands, mode shared.AddressMode) {
+	if mode != shared.DIRECT && mode != shared.INDIRECT {
+		panic("incorrect address mode on BRNEG operation")
+	}
+
 	if vm.accumulator < 0 {
 		vm.br(operands, mode)
 	}
 }
 
 func (vm *VirtualMachine) brpos(operands shared.Operands, mode shared.AddressMode) {
+	if mode != shared.DIRECT && mode != shared.INDIRECT {
+		panic("incorrect address mode on BRPOS operation")
+	}
+
 	if vm.accumulator > 0 {
 		vm.br(operands, mode)
 	}

@@ -483,7 +483,21 @@ func getOperandValue(operand string) (shared.Word, error) {
 		}
 
 	case isLiteral:
-		value, err = strconv.ParseInt(operand[1:], 10, shared.WordSize)
+		operand, err = removeAddressMode(operand)
+		if err != nil {
+			return 0, err
+		}
+		// if is char literal
+		if len(operand) > 3 {
+			if operand[1] == apostrophe && operand[3] == apostrophe {
+				value = int64(operand[2]) - '0'
+				if value < 0 {
+					return 0, errors.New("converção de literal inválida")
+				}
+				return shared.Word(value), nil
+			}
+		}
+		value, err = strconv.ParseInt(operand, 10, shared.WordSize)
 		if err != nil {
 			return 0, errors.New("literal decimal inválido")
 		}

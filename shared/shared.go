@@ -72,6 +72,8 @@ const (
 	INJ    Operation = 9
 )
 
+var ProgramStart int = -1
+var ProgramIndexOfStart int
 var OpSizes map[Operation]uint16 = map[Operation]uint16{
 	ADD:    2,
 	BR:     2,

@@ -32,6 +32,7 @@ func New(stackLimitArg uint16) *VirtualMachine {
 	vm.isRunning = true
 	vm.stackLimit = stackLimitArg
 	vm.programBase = stackBase + vm.stackLimit + 1
+	vm.programCounter = uint16(shared.ProgramStart)
 	return vm
 }
 
@@ -139,7 +140,7 @@ func (vm *VirtualMachine) stackPop() (uint16, error) {
 }
 
 func (vm *VirtualMachine) Reset() {
-	vm.programCounter = 0
+	vm.programCounter = uint16(shared.ProgramStart)
 	vm.accumulator = 0
 	vm.operation = 0
 	vm.memoryAddress = 0

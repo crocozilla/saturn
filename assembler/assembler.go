@@ -43,6 +43,7 @@ func Run(filePaths ...string) (
 	definitionTables []map[string]shared.SymbolInfo, useTables []map[string][]uint16,
 	programNames []string, programSizes, stackSizes []uint16) {
 
+	isProgramStartSet := false
 	for _, filePath := range filePaths {
 		file, err := os.Open(filePath)
 		if err != nil {
@@ -66,8 +67,16 @@ func Run(filePaths ...string) (
 		programNames = append(programNames, programName)
 		programSizes = append(programSizes, programSize)
 		stackSizes = append(stackSizes, stackSize)
+
+		if !isProgramStartSet && shared.ProgramStart != -1 {
+			isProgramStartSet = true
+			shared.ProgramIndexOfStart = len(programNames) - 1
+		}
 	}
 
+	if !isProgramStartSet {
+		panic("faltando indicação de onde começar a execução")
+	}
 	return definitionTables, useTables, programNames, programSizes, stackSizes
 }
 
@@ -593,6 +602,13 @@ func (assembler *Assembler) insertIntoProperTable(symbol string) {
 	err := validateSymbol(symbol)
 	if err != nil {
 		assembler.addError(err)
+	}
+	if symbol == assembler.programName {
+		if shared.ProgramStart != 0 {
+			assembler.addError(
+				errors.New("multiplos lugares com a label de começo de execução"))
+		}
+		shared.ProgramStart = int(assembler.locationCounter)
 	}
 
 	// if its defined and it is its first use, set its address to current address

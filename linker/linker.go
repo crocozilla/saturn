@@ -83,6 +83,15 @@ func firstPass(
 	}
 
 	for program_idx := range programSizes {
+
+		// set correct address to start execution
+		if program_idx == shared.ProgramIndexOfStart {
+			shared.ProgramStart = relocateRelativeAddress(
+				shared.ProgramStart,
+				program_idx,
+				segmentSizes)
+		}
+
 		// update useTables to global addresses
 		useTable := useTables[program_idx]
 		for symbol, uses := range useTable {

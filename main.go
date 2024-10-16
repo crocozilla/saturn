@@ -10,8 +10,8 @@ import (
 func main() {
 	programs := os.Args[1:]
 	if len(programs) == 0 { // default
-		programs = append(programs, "saturn_test1.asm")
-		programs = append(programs, "saturn_test2.asm")
+		programs = append(programs, "linker/linker_test.asm")
+		programs = append(programs, "linker/linker_test_part2.asm")
 	}
 
 	stackLimit, programName := linker.Run(assembler.Run(programs...))

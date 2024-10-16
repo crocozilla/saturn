@@ -1,2 +1,0 @@
- INTDEF SC
-SC CONST 3

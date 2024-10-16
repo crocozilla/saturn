@@ -497,6 +497,7 @@ func getOperandValue(operand string) (shared.Word, error) {
 				return shared.Word(value), nil
 			}
 		}
+		operand = operand[1:]
 		value, err = strconv.ParseInt(operand, 10, shared.WordSize)
 		if err != nil {
 			return 0, errors.New("literal decimal inválido")

@@ -11,6 +11,7 @@ func main() {
 	programs := os.Args[1:]
 	if len(programs) == 0 { // default
 		programs = append(programs, "saturn_test1.asm")
+		programs = append(programs, "saturn_test2.asm")
 	}
 
 	stackLimit, programName := linker.Run(assembler.Run(programs...))
